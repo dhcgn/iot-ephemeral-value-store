@@ -64,63 +64,124 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	uploadKey := vars["uploadKey"]
 
+	// Derive the download key from the upload key
+	downloadKey := deriveDownloadKey(uploadKey)
+
+	// Parse the duration for setting TTL on data
 	duration, err := time.ParseDuration(persistDuration)
 	if err != nil {
-		http.Error(w, "Invalid duration format", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("Invalid duration format: %v", err), http.StatusBadRequest)
 		return
 	}
 
+	// Collect all parameters into a map
 	params := r.URL.Query()
+	paramMap := make(map[string]string)
 	for key, values := range params {
 		if len(values) > 0 {
-			err := db.Update(func(txn *badger.Txn) error {
-				e := badger.NewEntry([]byte(uploadKey+"_"+key), []byte(values[0])).WithTTL(duration)
-				return txn.SetEntry(e)
-			})
-			if err != nil {
-				http.Error(w, "Failed to save to database", http.StatusInternalServerError)
-				return
-			}
+			paramMap[key] = values[0]
 		}
 	}
-	fmt.Fprintln(w, "OK")
+
+	// Get the current timestamp
+	timestamp := time.Now().UTC().Format(time.RFC3339)
+
+	// Add the timestamp to the map
+	paramMap["timestamp"] = timestamp
+
+	// Convert the parameter map to a JSON string
+	jsonData, err := json.Marshal(paramMap)
+	if err != nil {
+		http.Error(w, "Error encoding parameters to JSON", http.StatusInternalServerError)
+		return
+	}
+
+	// Store the JSON data in the database using the download key
+	err = db.Update(func(txn *badger.Txn) error {
+		e := badger.NewEntry([]byte(downloadKey), jsonData).WithTTL(duration)
+		return txn.SetEntry(e)
+	})
+	if err != nil {
+		http.Error(w, "Failed to save to database", http.StatusInternalServerError)
+		return
+	}
+
+	// Construct URLs for each parameter for the plainDownloadHandler
+	urls := make(map[string]string)
+	for key := range params {
+		urls[key] = fmt.Sprintf("http://%s/%s/plain/%s", r.Host, downloadKey, key)
+	}
+
+	// Construct the download URL
+	downloadURL := fmt.Sprintf("http://%s/%s/json", r.Host, downloadKey)
+
+	// Return the download URL in the response
+	jsonResponse(w, map[string]interface{}{
+		"message":        "Data uploaded successfully",
+		"download_url":   downloadURL,
+		"parameter_urls": urls,
+	})
 }
 
 func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	downloadKey := vars["downloadKey"]
 
-	found := false
-	data := make(map[string]string)
+	var jsonData []byte
 	err := db.View(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
-		it := txn.NewIterator(opts)
-		defer it.Close()
-
-		prefix := downloadKey + "_"
-		for it.Seek([]byte(prefix)); it.ValidForPrefix([]byte(prefix)); it.Next() {
-			item := it.Item()
-			key := string(item.Key())[len(prefix):]
-			err := item.Value(func(val []byte) error {
-				data[key] = string(val)
-				found = true
-				return nil
-			})
-			if err != nil {
-				return err
-			}
+		item, err := txn.Get([]byte(downloadKey))
+		if err != nil {
+			return err
 		}
-		return nil
+		jsonData, err = item.ValueCopy(nil)
+		return err
 	})
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		http.Error(w, "Invalid download key or database error", http.StatusNotFound)
 		return
 	}
-	if !found {
-		http.Error(w, "Invalid download key", http.StatusForbidden)
+
+	// Set header and write the JSON data to the response writer
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonData)
+}
+
+func plainDownloadHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	downloadKey := vars["downloadKey"]
+	param := vars["param"]
+
+	var jsonData []byte
+	err := db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get([]byte(downloadKey))
+		if err != nil {
+			return err
+		}
+		jsonData, err = item.ValueCopy(nil)
+		return err
+	})
+	if err != nil {
+		http.Error(w, "Data not found", http.StatusNotFound)
 		return
 	}
-	jsonResponse(w, data)
+
+	// Parse the JSON data to retrieve the specific parameter
+	paramMap := make(map[string]string)
+	if err := json.Unmarshal(jsonData, &paramMap); err != nil {
+		http.Error(w, "Error decoding JSON", http.StatusInternalServerError)
+		return
+	}
+
+	// Retrieve the value for the requested parameter
+	value, ok := paramMap[param]
+	if !ok {
+		http.Error(w, "Parameter not found", http.StatusNotFound)
+		return
+	}
+
+	// Return the value as plain text
+	w.Header().Set("Content-Type", "text/plain")
+	fmt.Fprintln(w, value)
 }
 
 func main() {
@@ -148,6 +209,7 @@ func main() {
 	r.HandleFunc("/kp", keyPairHandler).Methods("GET")
 	r.HandleFunc("/{uploadKey}/", uploadHandler).Methods("GET")
 	r.HandleFunc("/{downloadKey}/json", downloadHandler).Methods("GET")
+	r.HandleFunc("/{downloadKey}/plain/{param}", plainDownloadHandler).Methods("GET")
 
 	serverAddress := fmt.Sprintf("127.0.0.1:%d", port)
 	srv := &http.Server{

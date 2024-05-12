@@ -34,6 +34,14 @@ GET https://your-server.com/kp
 GET https://your-server.com/{upload-key}/?temp=23&hum=43
 
 200 OK
+{
+  "download_url": "http://127.0.0.1:8080/{download-key}/json",
+  "message": "Data uploaded successfully",
+  "parameter_urls": {
+    "hum": "http://127.0.0.1:8080/{download-key}/plain/hum",
+    "temp": "http://127.0.0.1:8080/{download-key}/plain/temp"
+  }
+}
 ```
 
 ## Download Values
@@ -47,6 +55,15 @@ GET https://your-server.com/{download-key}/json
   "hum": "43"
 }
 ```
+
+```http
+GET https://your-server.com/{download-key}/plain/hum
+
+200 OK
+43
+```
+
+
 
 ## CLI
 
