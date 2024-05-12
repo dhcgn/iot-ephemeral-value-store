@@ -9,6 +9,18 @@
     <h1>Welcome to the IoT Ephemeral Value Store Server</h1>
     <p>This service allows you to temporarily store and retrieve IoT data via HTTP. Below are some examples of how you can interact with the server:</p>
     
+    <h2>Getting Started</h2>
+    <p>
+        Just use this url generated just for you: <a href="/{{.UploadKey}}/?name=value">/{{.UploadKey}}/?name=value</a> and access it with <a href="/{{.DownloadKey}}/plain/name">/{{.UploadKey}}/plain/name</a> 
+        or in json with <a href="/{{.DownloadKey}}/json">/{{.UploadKey}}/json</a> 
+    </p>
+
+    <h2>Server Settings</h2>
+    <ul>
+        <li><strong>Data rentention:</strong> {{.DataRentention}}</li>
+    </ul>
+
+
     <h2>API Usage</h2>
     <ul>
         <li><strong>Create Key Pair:</strong> <code>GET /kp</code></li>
@@ -17,7 +29,7 @@
         <li><strong>Download Specific Data Field:</strong> <code>GET /{download-key}/plain/{param}</code></li>
     </ul>
 
-    <h2>API Example</h2>
+    <h2>API Example, with static keys!</h2>
     <ul>
         <li><strong>Upload Data:</strong> <a href="/5347d61e218f9a7988292c82ddfe347a276fcb82dd2df8aaad733c8970379f41/?temp=23&hum=43">/5347d61e218f9a7988292c82ddfe347a276fcb82dd2df8aaad733c8970379f41/?temp=23&hum=43</a></li>
         <li><strong>Download Data as JSON:</strong> <a href="/39077ff759b3bbd0592728cbd16aab9e061328bbbffb740923337b23fdd0ad39/json">/39077ff759b3bbd0592728cbd16aab9e061328bbbffb740923337b23fdd0ad39/json</a></li>

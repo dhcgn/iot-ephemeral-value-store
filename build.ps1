@@ -1,3 +1,5 @@
+$restoreGOOS = $env:GOOS
+
 # Set up the environment for cross-compilation
 $env:GOOS = "linux"
 $env:GOARCH = "amd64"
@@ -22,3 +24,6 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "Build failed with exit code $LASTEXITCODE"
     exit $LASTEXITCODE
 }
+
+# Restore the original GOOS value
+$env:GOOS = $restoreGOOS

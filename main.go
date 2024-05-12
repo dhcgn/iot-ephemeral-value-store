@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"text/template"
 	"time"
 
 	"github.com/dgraph-io/badger/v3"
@@ -298,6 +299,12 @@ func main() {
 	}
 	defer db.Close()
 
+	// Template parsing
+	tmpl, err := template.ParseFS(staticFiles, "static/index.html")
+	if err != nil {
+		log.Fatal("Error parsing templates:", err)
+	}
+
 	r := mux.NewRouter()
 
 	r.Use(limitRequestSize)
@@ -307,6 +314,16 @@ func main() {
 	r.HandleFunc("/{uploadKey}/", uploadHandler).Methods("GET")
 	r.HandleFunc("/{downloadKey}/json", downloadHandler).Methods("GET")
 	r.HandleFunc("/{downloadKey}/plain/{param}", plainDownloadHandler).Methods("GET")
+
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		key := generateRandomKey()
+		data := PageData{
+			UploadKey:      key,
+			DownloadKey:    deriveDownloadKey(key),
+			DataRentention: persistDuration,
+		}
+		tmpl.Execute(w, data)
+	})
 
 	staticSubFS, _ := fs.Sub(staticFiles, "static")
 	r.PathPrefix("/").Handler(http.FileServer(http.FS(staticSubFS)))
@@ -323,4 +340,10 @@ func main() {
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}
+}
+
+type PageData struct {
+	UploadKey      string
+	DownloadKey    string
+	DataRentention string
 }
