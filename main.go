@@ -21,6 +21,7 @@ var (
 	persistDuration string
 	storePath       string
 	port            int
+	db              *badger.DB
 )
 
 func init() {
@@ -48,16 +49,88 @@ func jsonResponse(w http.ResponseWriter, data interface{}) {
 	json.NewEncoder(w).Encode(data)
 }
 
+func keyPairHandler(w http.ResponseWriter, r *http.Request) {
+	uploadKey := generateRandomKey()
+	downloadKey := deriveDownloadKey(uploadKey)
+
+	response := map[string]string{
+		"upload-key":   uploadKey,
+		"download-key": downloadKey,
+	}
+	jsonResponse(w, response)
+}
+
+func uploadHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	uploadKey := vars["uploadKey"]
+
+	duration, err := time.ParseDuration(persistDuration)
+	if err != nil {
+		http.Error(w, "Invalid duration format", http.StatusBadRequest)
+		return
+	}
+
+	params := r.URL.Query()
+	for key, values := range params {
+		if len(values) > 0 {
+			err := db.Update(func(txn *badger.Txn) error {
+				e := badger.NewEntry([]byte(uploadKey+"_"+key), []byte(values[0])).WithTTL(duration)
+				return txn.SetEntry(e)
+			})
+			if err != nil {
+				http.Error(w, "Failed to save to database", http.StatusInternalServerError)
+				return
+			}
+		}
+	}
+	fmt.Fprintln(w, "OK")
+}
+
+func downloadHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	downloadKey := vars["downloadKey"]
+
+	found := false
+	data := make(map[string]string)
+	err := db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		prefix := downloadKey + "_"
+		for it.Seek([]byte(prefix)); it.ValidForPrefix([]byte(prefix)); it.Next() {
+			item := it.Item()
+			key := string(item.Key())[len(prefix):]
+			err := item.Value(func(val []byte) error {
+				data[key] = string(val)
+				found = true
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	if !found {
+		http.Error(w, "Invalid download key", http.StatusForbidden)
+		return
+	}
+	jsonResponse(w, data)
+}
+
 func main() {
 	flag.Parse()
 
-	// Resolve the absolute path of the store directory
 	absStorePath, err := filepath.Abs(storePath)
 	if err != nil {
 		log.Fatalf("Error resolving store path: %s", err)
 	}
 
-	// Ensure the store directory exists
 	if _, err := os.Stat(absStorePath); os.IsNotExist(err) {
 		err = os.MkdirAll(absStorePath, 0755)
 		if err != nil {
@@ -65,86 +138,16 @@ func main() {
 		}
 	}
 
-	// Open the Badger database at the resolved store path
-	db, err := badger.Open(badger.DefaultOptions(absStorePath))
+	db, err = badger.Open(badger.DefaultOptions(absStorePath))
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
-	duration, err := time.ParseDuration(persistDuration)
-	if err != nil {
-		log.Fatalf("Invalid duration format: %s", err)
-	}
-
 	r := mux.NewRouter()
-	r.HandleFunc("/kp", func(w http.ResponseWriter, r *http.Request) {
-		uploadKey := generateRandomKey()
-		downloadKey := deriveDownloadKey(uploadKey)
-
-		response := map[string]string{
-			"upload-key":   uploadKey,
-			"download-key": downloadKey,
-		}
-		jsonResponse(w, response)
-	}).Methods("GET")
-
-	r.HandleFunc("/{uploadKey}/", func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		uploadKey := vars["uploadKey"]
-
-		params := r.URL.Query()
-		for key, values := range params {
-			if len(values) > 0 {
-				err := db.Update(func(txn *badger.Txn) error {
-					e := badger.NewEntry([]byte(uploadKey+"_"+key), []byte(values[0])).WithTTL(duration)
-					return txn.SetEntry(e)
-				})
-				if err != nil {
-					http.Error(w, "Failed to save to database", http.StatusInternalServerError)
-					return
-				}
-			}
-		}
-		fmt.Fprintln(w, "OK")
-	}).Methods("GET")
-
-	r.HandleFunc("/{downloadKey}/json", func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		downloadKey := vars["downloadKey"]
-
-		found := false
-		data := make(map[string]string)
-		err := db.View(func(txn *badger.Txn) error {
-			opts := badger.DefaultIteratorOptions
-			it := txn.NewIterator(opts)
-			defer it.Close()
-
-			prefix := downloadKey + "_"
-			for it.Seek([]byte(prefix)); it.ValidForPrefix([]byte(prefix)); it.Next() {
-				item := it.Item()
-				key := string(item.Key())[len(prefix):]
-				err := item.Value(func(val []byte) error {
-					data[key] = string(val)
-					found = true
-					return nil
-				})
-				if err != nil {
-					return err
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			http.Error(w, "Database error", http.StatusInternalServerError)
-			return
-		}
-		if !found {
-			http.Error(w, "Invalid download key", http.StatusForbidden)
-			return
-		}
-		jsonResponse(w, data)
-	}).Methods("GET")
+	r.HandleFunc("/kp", keyPairHandler).Methods("GET")
+	r.HandleFunc("/{uploadKey}/", uploadHandler).Methods("GET")
+	r.HandleFunc("/{downloadKey}/json", downloadHandler).Methods("GET")
 
 	serverAddress := fmt.Sprintf("127.0.0.1:%d", port)
 	srv := &http.Server{
