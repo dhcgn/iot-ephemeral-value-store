@@ -2,7 +2,11 @@ module github.com/dhcgn/iot-ephemeral-value-store
 
 go 1.22.3
 
-require github.com/dgraph-io/badger/v3 v3.2103.5
+require (
+	github.com/dgraph-io/badger/v3 v3.2103.5
+	github.com/gorilla/mux v1.8.1
+	golang.org/x/time v0.5.0
+)
 
 require (
 	github.com/cespare/xxhash v1.1.0 // indirect
@@ -15,12 +19,9 @@ require (
 	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/google/flatbuffers v1.12.1 // indirect
-	github.com/google/uuid v1.6.0 // indirect
-	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/klauspost/compress v1.12.3 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	go.opencensus.io v0.22.5 // indirect
-	golang.org/x/net v0.0.0-20201021035429-f5854403a974 // indirect
-	golang.org/x/sys v0.0.0-20221010170243-090e33056c14 // indirect
-	golang.org/x/time v0.5.0 // indirect
+	golang.org/x/net v0.23.0 // indirect
+	golang.org/x/sys v0.18.0 // indirect
 )
