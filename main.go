@@ -3,19 +3,26 @@ package main
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"embed"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/gorilla/mux"
 )
+
+//go:embed static/*
+var staticFiles embed.FS
 
 var (
 	persistDuration string
@@ -49,6 +56,19 @@ func jsonResponse(w http.ResponseWriter, data interface{}) {
 	json.NewEncoder(w).Encode(data)
 }
 
+// ValidateUploadKey checks if the uploadKey is a valid 256 bit hex string
+func ValidateUploadKey(uploadKey string) error {
+	uploadKey = strings.ToLower(uploadKey) // make it case insensitive
+	decoded, err := hex.DecodeString(uploadKey)
+	if err != nil {
+		return errors.New("uploadKey must be a 256 bit hex string")
+	}
+	if len(decoded) != 32 { // 256 bits = 32 bytes
+		return errors.New("uploadKey must be a 256 bit hex string")
+	}
+	return nil
+}
+
 func keyPairHandler(w http.ResponseWriter, r *http.Request) {
 	uploadKey := generateRandomKey()
 	downloadKey := deriveDownloadKey(uploadKey)
@@ -63,6 +83,12 @@ func keyPairHandler(w http.ResponseWriter, r *http.Request) {
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	uploadKey := vars["uploadKey"]
+
+	err := ValidateUploadKey(uploadKey)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	// Derive the download key from the upload key
 	downloadKey := deriveDownloadKey(uploadKey)
@@ -206,10 +232,14 @@ func main() {
 	defer db.Close()
 
 	r := mux.NewRouter()
+
 	r.HandleFunc("/kp", keyPairHandler).Methods("GET")
 	r.HandleFunc("/{uploadKey}/", uploadHandler).Methods("GET")
 	r.HandleFunc("/{downloadKey}/json", downloadHandler).Methods("GET")
 	r.HandleFunc("/{downloadKey}/plain/{param}", plainDownloadHandler).Methods("GET")
+
+	staticSubFS, _ := fs.Sub(staticFiles, "static")
+	r.PathPrefix("/").Handler(http.FileServer(http.FS(staticSubFS)))
 
 	serverAddress := fmt.Sprintf("127.0.0.1:%d", port)
 	srv := &http.Server{

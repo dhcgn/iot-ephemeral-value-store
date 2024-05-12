@@ -25,6 +25,12 @@ if [ ! -f "$BINARY_PATH" ]; then
     exit 1
 fi
 
+# Stop the service if it's running
+if systemctl is-active --quiet $SERVICE_NAME; then
+    echo "Stopping service..."
+    systemctl stop $SERVICE_NAME
+fi
+
 # Copy the binary to /usr/local/bin
 INSTALL_PATH="/usr/local/bin/$SERVICE_NAME"
 echo "Copying binary to $INSTALL_PATH..."

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Ephemeral Value Store Server</title>
+</head>
+<body>
+    <h1>Welcome to the IoT Ephemeral Value Store Server</h1>
+    <p>This service allows you to temporarily store and retrieve IoT data via HTTP. Below are some examples of how you can interact with the server:</p>
+    
+    <h2>API Usage</h2>
+    <ul>
+        <li><strong>Create Key Pair:</strong> <code>GET /kp</code></li>
+        <li><strong>Upload Data:</strong> <code>GET /{upload-key}/?temp=23&hum=43</code></li>
+        <li><strong>Download Data as JSON:</strong> <code>GET /{download-key}/json</code></li>
+        <li><strong>Download Specific Data Field:</strong> <code>GET /{download-key}/plain/{param}</code></li>
+    </ul>
+
+    <h2>API Example</h2>
+    <ul>
+        <li><strong>Upload Data:</strong> <a href="/5347d61e218f9a7988292c82ddfe347a276fcb82dd2df8aaad733c8970379f41/?temp=23&hum=43">/5347d61e218f9a7988292c82ddfe347a276fcb82dd2df8aaad733c8970379f41/?temp=23&hum=43</a></li>
+        <li><strong>Download Data as JSON:</strong> <a href="/39077ff759b3bbd0592728cbd16aab9e061328bbbffb740923337b23fdd0ad39/json">/39077ff759b3bbd0592728cbd16aab9e061328bbbffb740923337b23fdd0ad39/json</a></li>
+        <li><strong>Download Specific Data Field:</strong><a href="/39077ff759b3bbd0592728cbd16aab9e061328bbbffb740923337b23fdd0ad39/plain/hum">/39077ff759b3bbd0592728cbd16aab9e061328bbbffb740923337b23fdd0ad39/plain/hum</a> </li>
+    </ul>
+
+    <p>
+        The download key can be derived from the upload key. 
+        <code>echo -n  "5347d61e218f9a7988292c82ddfe347a276fcb82dd2df8aaad733c8970379f41" | sha256sum</code>
+    </p>
+
+    <h2>GitHub Repository</h2>
+    <p>You can find the source code and contribute to this project on GitHub:</p>
+    <a href="https://github.com/dhcgn/iot-ephemeral-value-store">IoT Ephemeral Value Store Server on GitHub</a>
+</body>
+</html>
