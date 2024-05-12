@@ -11,14 +11,35 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/gorilla/mux"
+	"golang.org/x/time/rate"
+)
+
+const (
+	// Server configuration
+	MaxRequestSize     = 1024 * 10 // 10 KB for request size limit
+	RateLimitPerSecond = 10        // Requests per second
+	RateLimitBurst     = 5         // Burst capability
+
+	// Database and server paths
+	DefaultStorePath       = "./data"
+	DefaultPersistDuration = "24h"
+
+	// Server timeout settings
+	WriteTimeout = 15 * time.Second
+	ReadTimeout  = 15 * time.Second
+
+	// HTTP server configuration
+	DefaultPort = 8080
 )
 
 //go:embed static/*
@@ -32,9 +53,9 @@ var (
 )
 
 func init() {
-	flag.StringVar(&persistDuration, "persist-values-for", "24h", "Duration for which the values are stored before they are deleted.")
-	flag.StringVar(&storePath, "store", "./data", "Path to the directory where the values will be stored.")
-	flag.IntVar(&port, "port", 8080, "The port number on which the server will listen.")
+	flag.StringVar(&persistDuration, "persist-values-for", DefaultPersistDuration, "Duration for which the values are stored before they are deleted.")
+	flag.StringVar(&storePath, "store", DefaultStorePath, "Path to the directory where the values will be stored.")
+	flag.IntVar(&port, "port", DefaultPort, "The port number on which the server will listen.")
 }
 
 func generateRandomKey() string {
@@ -67,6 +88,18 @@ func ValidateUploadKey(uploadKey string) error {
 		return errors.New("uploadKey must be a 256 bit hex string")
 	}
 	return nil
+}
+
+func limitRequestSize(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check if the request size is too large
+		if r.ContentLength > MaxRequestSize {
+			http.Error(w, "Request size is too large", http.StatusRequestEntityTooLarge)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 func keyPairHandler(w http.ResponseWriter, r *http.Request) {
@@ -210,6 +243,40 @@ func plainDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, value)
 }
 
+var clients = make(map[string]*rate.Limiter)
+var mtx sync.Mutex
+
+func getLimiter(ip string) *rate.Limiter {
+	mtx.Lock()
+	defer mtx.Unlock()
+
+	limiter, exists := clients[ip]
+	if !exists {
+		limiter = rate.NewLimiter(RateLimitPerSecond, RateLimitBurst)
+		clients[ip] = limiter
+	}
+
+	return limiter
+}
+
+func rateLimit(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ip, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		limiter := getLimiter(ip)
+		if !limiter.Allow() {
+			http.Error(w, "Too Many Requests", http.StatusTooManyRequests)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	flag.Parse()
 
@@ -233,6 +300,9 @@ func main() {
 
 	r := mux.NewRouter()
 
+	r.Use(limitRequestSize)
+	r.Use(rateLimit)
+
 	r.HandleFunc("/kp", keyPairHandler).Methods("GET")
 	r.HandleFunc("/{uploadKey}/", uploadHandler).Methods("GET")
 	r.HandleFunc("/{downloadKey}/json", downloadHandler).Methods("GET")
@@ -249,7 +319,7 @@ func main() {
 		ReadTimeout:  15 * time.Second,
 	}
 
-	fmt.Printf("Starting server on %s\n", serverAddress)
+	fmt.Printf("Starting server on http://%s\n", serverAddress)
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}
