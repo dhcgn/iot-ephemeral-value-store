@@ -363,8 +363,8 @@ func main() {
 	srv := &http.Server{
 		Handler:      r,
 		Addr:         serverAddress,
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
+		WriteTimeout: WriteTimeout,
+		ReadTimeout:  ReadTimeout,
 	}
 
 	fmt.Printf("Starting server on http://%s\n", serverAddress)
