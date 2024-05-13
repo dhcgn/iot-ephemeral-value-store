@@ -97,12 +97,12 @@ GET https://your-server.com/{download-key}/plain/hum
 
 ### CLI
 
-- `--persist-values-for`: Duration for which the values are stored before they are deleted. Example: `1d` for one day, `2h` for two hours.
-- `--store`: Path to the directory where the values will be stored.
-- `--port`: The port number on which the server will listen.
+- `-persist-values-for`: Duration for which the values are stored before they are deleted. Example: `1d` for one day, `2h` for two hours.
+- `-store`: Path to the directory where the values will be stored.
+- `-port`: The port number on which the server will listen.
 
 ```
-iot-ephemeral-value-store-server --persist-values-for 1d --store ~/iot-ephemeral-value-store --port 8080
+iot-ephemeral-value-store-server -persist-values-for 1d -store ~/iot-ephemeral-value-store -port 8080
 ```
 
 ### Install the Server as a System Service

@@ -1,9 +1,10 @@
 #!/bin/bash
 
-# Define the service name
+# Define the service name and default store path
 SERVICE_NAME="iot-ephemeral-value-store-server"
 USER="root"
 GROUP="root"
+DEFAULT_STORE_PATH="/var/lib/iot-ephemeral-value-store"
 
 # Check if running as root
 if [ "$(id -u)" != "0" ]; then
@@ -37,6 +38,13 @@ echo "Copying binary to $INSTALL_PATH..."
 cp "$BINARY_PATH" $INSTALL_PATH
 chmod +x $INSTALL_PATH
 
+# Ensure the default store directory exists
+if [ ! -d "$DEFAULT_STORE_PATH" ]; then
+    echo "Creating store directory at $DEFAULT_STORE_PATH..."
+    mkdir -p $DEFAULT_STORE_PATH
+    chown $USER:$GROUP $DEFAULT_STORE_PATH
+fi
+
 # Create systemd service file
 echo "Creating systemd service file..."
 cat > /etc/systemd/system/$SERVICE_NAME.service <<EOF
@@ -48,7 +56,7 @@ After=network.target
 Type=simple
 User=$USER
 Group=$GROUP
-ExecStart=$INSTALL_PATH
+ExecStart=$INSTALL_PATH -store $DEFAULT_STORE_PATH
 Restart=on-failure
 
 [Install]

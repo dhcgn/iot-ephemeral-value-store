@@ -54,9 +54,12 @@ var (
 )
 
 func init() {
-	flag.StringVar(&persistDuration, "persist-values-for", DefaultPersistDuration, "Duration for which the values are stored before they are deleted.")
-	flag.StringVar(&storePath, "store", DefaultStorePath, "Path to the directory where the values will be stored.")
-	flag.IntVar(&port, "port", DefaultPort, "The port number on which the server will listen.")
+	myFlags := flag.NewFlagSet("iot-ephemeral-value-store", flag.ExitOnError)
+	myFlags.StringVar(&persistDuration, "persist-values-for", DefaultPersistDuration, "Duration for which the values are stored before they are deleted.")
+	myFlags.StringVar(&storePath, "store", DefaultStorePath, "Path to the directory where the values will be stored.")
+	myFlags.IntVar(&port, "port", DefaultPort, "The port number on which the server will listen.")
+
+	myFlags.Parse(os.Args[1:])
 }
 
 func generateRandomKey() string {
@@ -279,8 +282,6 @@ func rateLimit(next http.Handler) http.Handler {
 }
 
 func main() {
-	flag.Parse()
-
 	absStorePath, err := filepath.Abs(storePath)
 	if err != nil {
 		log.Fatalf("Error resolving store path: %s", err)
