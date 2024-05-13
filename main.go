@@ -9,6 +9,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"html"
 	"io/fs"
 	"log"
 	"net"
@@ -117,6 +118,32 @@ func keyPairHandler(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, response)
 }
 
+func sanitizeInput(input string) string {
+	// Escapes HTML special characters like <, >, & and quotes
+	return html.EscapeString(input)
+}
+
+func enableCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Allow all origins
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		// Specify methods that you want to allow
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+
+		// Specify headers that you want to allow
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		// Handle preflight requests for CORS
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	uploadKey := vars["uploadKey"]
@@ -142,7 +169,9 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	paramMap := make(map[string]string)
 	for key, values := range params {
 		if len(values) > 0 {
-			paramMap[key] = values[0]
+			// Sanitize each parameter value
+			sanitizedValue := sanitizeInput(values[0])
+			paramMap[key] = sanitizedValue
 		}
 	}
 
@@ -308,6 +337,7 @@ func main() {
 
 	r := mux.NewRouter()
 
+	r.Use(enableCORS)
 	r.Use(limitRequestSize)
 	r.Use(rateLimit)
 
