@@ -8,6 +8,12 @@ This project provides a simple HTTP server that offers ephemeral storage for IoT
 
 I want to share sensor readings from my home with other devices or on the web. This should be done using a service with a very simple and easy http interface, but secure by design.
 
+Very simple and easy means in this context:
+
+- Should work simple IoT devices
+- Only HTTP GET
+- KeyPair is very easy to generate with standard tool or with online generators
+
 ### A example using a shelly temperature sensor
 
 1. Obtain a key pair for upload and download as http links (these keys are linked together, but you can share the Download-Key with compromise the Upload-Key.)
