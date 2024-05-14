@@ -1,3 +1,5 @@
+[![Go](https://github.com/dhcgn/iot-ephemeral-value-store/actions/workflows/build_and_test.yml/badge.svg)](https://github.com/dhcgn/iot-ephemeral-value-store/actions/workflows/build_and_test.yml)
+
 # iot-ephemeral-value-store
 
 This project provides a simple HTTP server that offers ephemeral storage for IoT data. It generates unique key pairs for data upload and retrieval, stores data temporarily based on a configurable duration, and allows data to be fetched in both JSON and plain text formats.
@@ -8,11 +10,11 @@ I want to share sensor readings from my home with other devices or on the web. T
 
 ### A example using a shelly temperature sensor
 
-1. Obtain a key pair for upload and download as http links
+1. Obtain a key pair for upload and download as http links (these keys are linked together, but you can share the Download-Key with compromise the Upload-Key.)
    1. Upload: `https://iot.my-server/2f27c.../`
    1. Download: `https://iot.my-server/234ca1.../`
 1. Go to the Shelly web interface, add the link to *action* at event *temperature reading*, add the placeholder for the temperature
-   1. e.g. `https://iot.my-server/2f27c.../?temp={{temp}}`
+   1. e.g. `https://iot.my-server/2f27c.../?temp={{temp}}` where `{{temp}}` will be replaced with `18.8`
 1. Share the links with friends or in websites
    1. JSON: `https://iot.my-server/234ca1.../json` returns `{"temp":"18.8","timestamp":"2024-05-14T11:37:21Z"}`
    1. Plain: `https://iot.my-server/234ca1.../plain/temp` returns `18.8`
@@ -26,7 +28,6 @@ I want to share sensor readings from my home with other devices or on the web. T
 - **Key Pair Generation**: Generate unique upload and download keys for secure data handling.
 - **Data Upload**: Upload data with a simple GET request, using the generated upload key.
 - **Data Retrieval**: Retrieve stored data using the download key, either as JSON or plain text for specific data fields.
-
 
 ## HTTP Calls
 
