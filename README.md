@@ -2,6 +2,25 @@
 
 This project provides a simple HTTP server that offers ephemeral storage for IoT data. It generates unique key pairs for data upload and retrieval, stores data temporarily based on a configurable duration, and allows data to be fetched in both JSON and plain text formats.
 
+## Motivation
+
+I want to share sensor readings from my home with other devices or on the web. This should be done using a service with a very simple and easy http interface, but secure by design.
+
+### A example using a shelly temperature sensor
+
+1. Obtain a key pair for upload and download as http links
+   1. Upload: `https://iot.my-server/2f27c.../`
+   1. Download: `https://iot.my-server/234ca1.../`
+1. Go to the Shelly web interface, add the link to *action* at event *temperature reading*, add the placeholder for the temperature
+   1. e.g. `https://iot.my-server/2f27c.../?temp={{temp}}`
+1. Share the links with friends or in websites
+   1. JSON: `https://iot.my-server/234ca1.../json` returns `{"temp":"18.8","timestamp":"2024-05-14T11:37:21Z"}`
+   1. Plain: `https://iot.my-server/234ca1.../plain/temp` returns `18.8`
+
+### Infrastucture
+
+![](docs\infra.drawio.svg)
+
 ## Features
 
 - **Key Pair Generation**: Generate unique upload and download keys for secure data handling.

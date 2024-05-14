@@ -1,0 +1,77 @@
+<mxfile host="app.diagrams.net" modified="2024-05-14T11:52:02.719Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" etag="ClGs82CezNaqWARKBChQ" version="24.4.0" type="device">
+  <diagram name="Seite-1" id="LFSJtqtP9cqCfeXbF8tE">
+    <mxGraphModel dx="940" dy="586" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="Ko75xBsUWZ_g-aVPKA19-1" value="Home 1" style="swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="40" width="200" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="Ko75xBsUWZ_g-aVPKA19-3" value="IoT Device" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="Ko75xBsUWZ_g-aVPKA19-1">
+          <mxGeometry x="20" y="40" width="70" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="Ko75xBsUWZ_g-aVPKA19-2" value="Home 2" style="swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="570" y="40" width="200" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="Ko75xBsUWZ_g-aVPKA19-4" value="IoT Device" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="Ko75xBsUWZ_g-aVPKA19-2">
+          <mxGeometry x="120" y="30" width="70" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="Ko75xBsUWZ_g-aVPKA19-5" value="Server" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="Ko75xBsUWZ_g-aVPKA19-2">
+          <mxGeometry x="30" y="100" width="70" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="Ko75xBsUWZ_g-aVPKA19-14" value="download values on demand" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.31;exitY=0.8;exitDx=0;exitDy=0;exitPerimeter=0;" edge="1" parent="1" source="Ko75xBsUWZ_g-aVPKA19-6" target="Ko75xBsUWZ_g-aVPKA19-12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Ko75xBsUWZ_g-aVPKA19-19" value="download values periodically" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.55;exitY=0.95;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="Ko75xBsUWZ_g-aVPKA19-6" target="Ko75xBsUWZ_g-aVPKA19-15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Ko75xBsUWZ_g-aVPKA19-6" value="This App&lt;br&gt;&lt;br&gt;IoT Ephemeral &lt;br&gt;Value Store Server" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="10" width="230" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="Ko75xBsUWZ_g-aVPKA19-7" value="upload values" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="Ko75xBsUWZ_g-aVPKA19-3" target="Ko75xBsUWZ_g-aVPKA19-6">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="160" y="140" as="sourcePoint" />
+            <mxPoint x="210" y="90" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Ko75xBsUWZ_g-aVPKA19-8" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.96;entryY=0.7;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="Ko75xBsUWZ_g-aVPKA19-4" target="Ko75xBsUWZ_g-aVPKA19-6">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="390" y="330" as="sourcePoint" />
+            <mxPoint x="440" y="280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Ko75xBsUWZ_g-aVPKA19-10" value="upload values" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="Ko75xBsUWZ_g-aVPKA19-8">
+          <mxGeometry x="-0.503" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Ko75xBsUWZ_g-aVPKA19-9" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="Ko75xBsUWZ_g-aVPKA19-5" target="Ko75xBsUWZ_g-aVPKA19-6">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="390" y="330" as="sourcePoint" />
+            <mxPoint x="440" y="280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Ko75xBsUWZ_g-aVPKA19-11" value="upload values" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="Ko75xBsUWZ_g-aVPKA19-9">
+          <mxGeometry x="0.1166" y="2" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Ko75xBsUWZ_g-aVPKA19-12" value="Actor" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="280" y="230" width="30" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Ko75xBsUWZ_g-aVPKA19-15" value="Consuments" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="410" y="240" width="140" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="Ko75xBsUWZ_g-aVPKA19-16" value="Websites" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;rotatable=0;whiteSpace=wrap;html=1;" vertex="1" parent="Ko75xBsUWZ_g-aVPKA19-15">
+          <mxGeometry y="30" width="140" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Ko75xBsUWZ_g-aVPKA19-17" value="Apps" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;rotatable=0;whiteSpace=wrap;html=1;" vertex="1" parent="Ko75xBsUWZ_g-aVPKA19-15">
+          <mxGeometry y="60" width="140" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Ko75xBsUWZ_g-aVPKA19-18" value="Other Servers" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;rotatable=0;whiteSpace=wrap;html=1;" vertex="1" parent="Ko75xBsUWZ_g-aVPKA19-15">
+          <mxGeometry y="90" width="140" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
