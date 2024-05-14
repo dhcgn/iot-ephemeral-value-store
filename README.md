@@ -21,7 +21,7 @@ I want to share sensor readings from my home with other devices or on the web. T
 
 ### Infrastucture
 
-![](docs\infra.drawio.svg)
+![](docs/infra.drawio.svg)
 
 ## Features
 
