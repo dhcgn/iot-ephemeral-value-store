@@ -29,6 +29,13 @@
         <li><strong>Download Specific Data Field:</strong> <code>GET /d/{download-key}/plain/{param}</code></li>
     </ul>
 
+    <h2>Advanced API Usage - Patch with same {upload-key}</h2>
+    <ul>
+        <li><strong>Patch Data:</strong> <code>GET /patch/{upload-key}/house_1/?temp=23&hum=43</code></li>
+        <li><strong>Patch Data:</strong> <code>GET /patch/{upload-key}/house_1/?volatage=230</code></li>
+        <li><strong>Patch Data:</strong> <code>GET /patch/{upload-key}/house_2/basement/roomt1/?volatage=230</code></li>
+    </ul>
+
     <h2>API Example, with static keys!</h2>
     <ul>
         <li><strong>Upload Data:</strong> <a href="/u/5347d61e218f9a7988292c82ddfe347a276fcb82dd2df8aaad733c8970379f41/?temp=23&hum=43">/u/5347d61e218f9a7988292c82ddfe347a276fcb82dd2df8aaad733c8970379f41/?temp=23&hum=43</a></li>

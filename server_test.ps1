@@ -118,6 +118,24 @@ if ($uploadResult.message -eq "Data uploaded successfully") {
 }
 
 #
+# Upload patch value add #1
+#
+
+$uploadUrl = $server + '/patch/' + $uploadKey + '/1/2'
+$guid1a = [guid]::NewGuid().ToString()
+$param = "?valueA=$guid1a"
+$uri = $uploadUrl+$param 
+Write-Host $uri -ForegroundColor Yellow
+$uploadResult =  Invoke-RestMethod -Uri $uri
+
+if ($uploadResult.message -eq "Data uploaded successfully") {
+    Write-Host '✅ Test passed Upload NESTED 1a'
+} else {
+    Write-Host '🔴 Test failed Upload NESTED 1a'
+    exit
+}
+
+#
 # Upload patch value #2
 #
 
@@ -165,6 +183,15 @@ if ($actual  -eq $guid1) {
     Write-Host '✅ Test passed JSON NESTED 1'
 } else {
     Write-Host '🔴 Test failed JSON NESTED 1'
+    Write-Host "Expected: >$guid1<"
+    Write-Host "Actual: >$actual<"
+}
+
+$actual = $downloadResult.'1'.'2'.valueA
+if ($actual  -eq $guid1a) {
+    Write-Host '✅ Test passed JSON NESTED 1a'
+} else {
+    Write-Host '🔴 Test failed JSON NESTED 1a'
     Write-Host "Expected: >$guid1<"
     Write-Host "Actual: >$actual<"
 }
