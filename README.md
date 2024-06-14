@@ -61,15 +61,15 @@ echo "Download Key: $download_key"
 - {upload-key} must be a hex 256bit representation
 
 ```http
-GET https://your-server.com/{upload-key}/?temp=23&hum=43
+GET https://your-server.com/u/{upload-key}/?temp=23&hum=43
 
 200 OK
 {
-  "download_url": "http://127.0.0.1:8080/{download-key}/json",
+  "download_url": "http://127.0.0.1:8080/d/{download-key}/json",
   "message": "Data uploaded successfully",
   "parameter_urls": {
-    "hum": "http://127.0.0.1:8080/{download-key}/plain/hum",
-    "temp": "http://127.0.0.1:8080/{download-key}/plain/temp"
+    "hum": "http://127.0.0.1:8080/d/{download-key}/plain/hum",
+    "temp": "http://127.0.0.1:8080/d/{download-key}/plain/temp"
   }
 }
 ```
@@ -77,7 +77,7 @@ GET https://your-server.com/{upload-key}/?temp=23&hum=43
 ### Download Values
 
 ```http
-GET https://your-server.com/{download-key}/json
+GET https://your-server.com/d/{download-key}/json
 
 200 OK
 {
@@ -88,11 +88,86 @@ GET https://your-server.com/{download-key}/json
 ```
 
 ```http
-GET https://your-server.com/{download-key}/plain/hum
+GET https://your-server.com/d/{download-key}/plain/hum
 
 200 OK
 43
 ```
+
+### Patch Values
+
+The `/patch/` endpoint allows you to upload and merge new data into an existing JSON structure using an upload key. This endpoint supports nested paths, enabling you to update specific parts of a JSON object.
+
+- `{upload-key}` must be a 256-bit hex representation.
+- `{param}` can be a nested path, allowing for complex JSON structures.
+
+#### Example Request
+
+```http
+GET https://your-server.com/patch/{upload-key}/{param:.*}?key1=value1&key2=value2
+
+200 OK
+{
+  "message": "Data uploaded successfully",
+  "download_url": "http://127.0.0.1:8080/d/{download-key}/json",
+  "parameter_urls": {
+    "key1": "http://127.0.0.1:8080/d/{download-key}/plain/key1",
+    "key2": "http://127.0.0.1:8080/d/{download-key}/plain/key2"
+  }
+}
+```
+
+#### Example Usage
+
+##### Upload Data to Root
+
+```http
+GET https://your-server.com/patch/{upload-key}/?temp=23&hum=43
+
+200 OK
+{
+  "message": "Data uploaded successfully",
+  "download_url": "http://127.0.0.1:8080/d/{download-key}/json",
+  "parameter_urls": {
+    "temp": "http://127.0.0.1:8080/d/{download-key}/plain/temp",
+    "hum": "http://127.0.0.1:8080/d/{download-key}/plain/hum"
+  }
+}
+```
+
+##### Upload Nested Data
+
+```http
+GET https://your-server.com/patch/{upload-key}/house_1/?temp=30&hum=50
+
+200 OK
+{
+  "message": "Data uploaded successfully",
+  "download_url": "http://127.0.0.1:8080/d/{download-key}/json",
+  "parameter_urls": {
+    "temp": "http://127.0.0.1:8080/d/{download-key}/plain/house_1/temp",
+    "hum": "http://127.0.0.1:8080/d/{download-key}/plain/house_1/hum"
+  }
+}
+```
+
+##### Upload Deeply Nested Data
+
+```http
+GET https://your-server.com/patch/{upload-key}/house_2/basement/kitchen/?temp=31&hum=49
+
+200 OK
+{
+  "message": "Data uploaded successfully",
+  "download_url": "http://127.0.0.1:8080/d/{download-key}/json",
+  "parameter_urls": {
+    "temp": "http://127.0.0.1:8080/d/{download-key}/plain/house_2/basement/kitchen/temp",
+    "hum": "http://127.0.0.1:8080/d/{download-key}/plain/house_2/basement/kitchen/hum"
+  }
+}
+```
+
+Using the `/patch/` endpoint, you can dynamically build and update complex JSON structures, making it versatile for various IoT data storage needs.
 
 ## Gettings startet
 
