@@ -82,7 +82,8 @@ GET https://your-server.com/{download-key}/json
 200 OK
 {
   "temp": "23",
-  "hum": "43"
+  "hum": "43",
+  "timestamp": "2024-06-14T12:12:36Z"
 }
 ```
 
