@@ -54,7 +54,7 @@ var (
 	db              *badger.DB
 )
 
-func init() {
+func initFlags() {
 	myFlags := flag.NewFlagSet("iot-ephemeral-value-store", flag.ExitOnError)
 	myFlags.StringVar(&persistDuration, "persist-values-for", DefaultPersistDuration, "Duration for which the values are stored before they are deleted.")
 	myFlags.StringVar(&storePath, "store", DefaultStorePath, "Path to the directory where the values will be stored.")
@@ -266,8 +266,6 @@ func mergeData(existingData map[string]interface{}, newData map[string]string, p
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	uploadKey := vars["uploadKey"]
-	path := vars["param"]
-	fmt.Println(path)
 
 	err := ValidateUploadKey(uploadKey)
 	if err != nil {
@@ -413,11 +411,19 @@ func getLimiter(ip string) *rate.Limiter {
 	return limiter
 }
 
+// rateLimit is a middleware that limits the number of requests per second
+// Exclude local IP addresses from rate limiting for debugging and testing purposes
 func rateLimit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		// Exclude local IP addresses from rate limiting
+		if ip == "127.0.0.1" || ip == "::1" {
+			next.ServeHTTP(w, r)
 			return
 		}
 
@@ -432,6 +438,8 @@ func rateLimit(next http.Handler) http.Handler {
 }
 
 func main() {
+	initFlags()
+
 	absStorePath, err := filepath.Abs(storePath)
 	if err != nil {
 		log.Fatalf("Error resolving store path: %s", err)
