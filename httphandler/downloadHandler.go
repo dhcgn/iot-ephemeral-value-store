@@ -29,7 +29,7 @@ func (c Config) PlainDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse the JSON data to retrieve the specific parameter
-	paramMap := make(map[string]string)
+	paramMap := make(map[string]interface{})
 	if err := json.Unmarshal(jsonData, &paramMap); err != nil {
 		http.Error(w, "Error decoding JSON", http.StatusInternalServerError)
 		return

@@ -145,10 +145,17 @@ func TestRoutesPatchDownload(t *testing.T) {
 		expectedStatusCode int
 		checkBody          bool
 		bodyContains       string
+		bodyNotContains    string
 	}{
-		{"GET patch", "GET", "/patch/" + key_up + "/1/" + "?value=8923423", http.StatusOK, true, "Data uploaded successfully"},
-		//{"GET d plain", "GET", "/d/" + key_down + "/" + "plain/1/value", http.StatusOK, true, "8923423\n"},
-		{"GET d json", "GET", "/d/" + key_down + "/" + "json", http.StatusOK, true, "\"value\":\"8923423\""},
+		{"GET patch level 0", "GET", "/patch/" + key_up + "/" + "?value=1_4324232", http.StatusOK, true, "Data uploaded successfully", ""},
+		{"GET patch level 2", "GET", "/patch/" + key_up + "/1/2" + "?value=2_8923423", http.StatusOK, true, "Data uploaded successfully", ""},
+
+		{"GET d plain level 0", "GET", "/d/" + key_down + "/" + "plain/value", http.StatusOK, true, "1_4324232\n", ""},
+		{"GET d plain level 2", "GET", "/d/" + key_down + "/" + "plain/1/2/value", http.StatusOK, true, "2_8923423\n", ""},
+
+		{"GET d json level 0", "GET", "/d/" + key_down + "/" + "json", http.StatusOK, true, "\"value\":\"1_4324232\"", ""},
+		{"GET d json level 2", "GET", "/d/" + key_down + "/" + "json", http.StatusOK, true, "\"value\":\"2_8923423\"", ""},
+		{"GET d not contains empty key", "GET", "/d/" + key_down + "/" + "json", http.StatusOK, false, "", "\"\""},
 	}
 
 	for _, tt := range tests {
@@ -164,6 +171,10 @@ func TestRoutesPatchDownload(t *testing.T) {
 			assert.Equal(t, tt.expectedStatusCode, rr.Code)
 			if tt.checkBody {
 				assert.Contains(t, rr.Body.String(), tt.bodyContains)
+			}
+
+			if tt.bodyNotContains != "" {
+				assert.NotContains(t, rr.Body.String(), tt.bodyNotContains)
 			}
 		})
 	}
