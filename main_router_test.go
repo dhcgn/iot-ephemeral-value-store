@@ -92,7 +92,78 @@ func TestLegacyRoutes(t *testing.T) {
 			assert.Equal(t, tt.expectedStatusCode, rr.Code)
 			if tt.checkBody {
 				assert.Contains(t, rr.Body.String(), tt.bodyContains)
-				// assert.Equal(t, tt.body, rr.Body.String())
+			}
+		})
+	}
+}
+
+func TestRoutesUploadDownload(t *testing.T) {
+	httphandlerConfig, middlewareConfig := createTestEnvireonment(t)
+
+	router := createRouter(httphandlerConfig, middlewareConfig)
+
+	tests := []struct {
+		name               string
+		method             string
+		url                string
+		expectedStatusCode int
+		checkBody          bool
+		bodyContains       string
+	}{
+		{"GET /", "GET", "/u/" + key_up + "/" + "?value=8923423", http.StatusOK, true, "Data uploaded successfully"},
+		{"GET /", "GET", "/d/" + key_down + "/" + "plain/value", http.StatusOK, true, "8923423\n"},
+		{"GET /", "GET", "/d/" + key_down + "/" + "json", http.StatusOK, true, "\"value\":\"8923423\""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequest(tt.method, tt.url, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			rr := httptest.NewRecorder()
+			router.ServeHTTP(rr, req)
+
+			assert.Equal(t, tt.expectedStatusCode, rr.Code)
+			if tt.checkBody {
+				assert.Contains(t, rr.Body.String(), tt.bodyContains)
+			}
+		})
+	}
+}
+
+func TestRoutesPatchDownload(t *testing.T) {
+	httphandlerConfig, middlewareConfig := createTestEnvireonment(t)
+
+	router := createRouter(httphandlerConfig, middlewareConfig)
+
+	tests := []struct {
+		name               string
+		method             string
+		url                string
+		expectedStatusCode int
+		checkBody          bool
+		bodyContains       string
+	}{
+		{"GET patch", "GET", "/patch/" + key_up + "/1/" + "?value=8923423", http.StatusOK, true, "Data uploaded successfully"},
+		//{"GET d plain", "GET", "/d/" + key_down + "/" + "plain/1/value", http.StatusOK, true, "8923423\n"},
+		{"GET d json", "GET", "/d/" + key_down + "/" + "json", http.StatusOK, true, "\"value\":\"8923423\""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequest(tt.method, tt.url, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			rr := httptest.NewRecorder()
+			router.ServeHTTP(rr, req)
+
+			assert.Equal(t, tt.expectedStatusCode, rr.Code)
+			if tt.checkBody {
+				assert.Contains(t, rr.Body.String(), tt.bodyContains)
 			}
 		})
 	}
