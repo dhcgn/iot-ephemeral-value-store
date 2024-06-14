@@ -185,7 +185,7 @@ func (c Config) UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 // mergeData merges the new data into the existing JSON structure based on the provided path.
 func mergeData(existingData map[string]interface{}, newData map[string]string, path []string) {
-	if len(path) == 0 {
+	if len(path) == 0 || (len(path) == 1 && path[0] == "") {
 		for k, v := range newData {
 			existingData[k] = v
 		}
