@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/gorilla/mux"
@@ -35,11 +36,22 @@ func (c Config) PlainDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retrieve the value for the requested parameter
-	value, ok := paramMap[param]
-	if !ok {
-		http.Error(w, "Parameter not found", http.StatusNotFound)
-		return
+	// Split the param to get the keys for traversal
+	keys := strings.Split(param, "/")
+
+	// Traverse the map using the keys
+	var value interface{} = paramMap
+	for _, key := range keys {
+		if m, ok := value.(map[string]interface{}); ok {
+			value, ok = m[key]
+			if !ok {
+				http.Error(w, "Parameter not found", http.StatusNotFound)
+				return
+			}
+		} else {
+			http.Error(w, "Invalid parameter path", http.StatusBadRequest)
+			return
+		}
 	}
 
 	// Return the value as plain text
