@@ -146,6 +146,12 @@ func createRouter(hhc httphandler.Config, mc middleware.Config) *mux.Router {
 		tmpl.Execute(w, data)
 	})
 
+	// Not Found handler
+	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("404 Not Found"))
+	})
+
 	staticSubFS, _ := fs.Sub(staticFiles, "static")
 	r.PathPrefix("/").Handler(http.FileServer(http.FS(staticSubFS)))
 

@@ -12,6 +12,12 @@ import (
 // Exclude local IP addresses from rate limiting for debugging and testing purposes
 func (c Config) RateLimit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// In locla testing, r.RemoteAddr is empty
+		if r.RemoteAddr == "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
