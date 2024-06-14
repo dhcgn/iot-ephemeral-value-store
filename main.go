@@ -62,7 +62,18 @@ func main() {
 	db := createDatabase()
 	defer db.Close()
 
-	r := createRouter()
+	httphandlerConfig := httphandler.Config{
+		Db:              db,
+		PersistDuration: persistDuration,
+	}
+
+	middlewareConfig := middleware.Config{
+		RateLimitPerSecond: RateLimitPerSecond,
+		RateLimitBurst:     RateLimitBurst,
+		MaxRequestSize:     MaxRequestSize,
+	}
+
+	r := createRouter(httphandlerConfig, middlewareConfig)
 
 	serverAddress := fmt.Sprintf("127.0.0.1:%d", port)
 	srv := &http.Server{
@@ -98,7 +109,7 @@ func createDatabase() *badger.DB {
 	return db
 }
 
-func createRouter() *mux.Router {
+func createRouter(hhc httphandler.Config, mc middleware.Config) *mux.Router {
 	// Template parsing
 	tmpl, err := template.ParseFS(staticFiles, "static/index.html")
 	if err != nil {
@@ -107,33 +118,23 @@ func createRouter() *mux.Router {
 
 	r := mux.NewRouter()
 
-	middleware := middleware.Config{
-		RateLimitPerSecond: RateLimitPerSecond,
-		RateLimitBurst:     RateLimitBurst,
-		MaxRequestSize:     MaxRequestSize,
-	}
-	r.Use(middleware.EnableCORS)
-	r.Use(middleware.LimitRequestSize)
-	r.Use(middleware.RateLimit)
+	r.Use(mc.EnableCORS)
+	r.Use(mc.LimitRequestSize)
+	r.Use(mc.RateLimit)
 
-	httphandler := httphandler.Config{
-		Db:              db,
-		PersistDuration: persistDuration,
-	}
-
-	r.HandleFunc("/kp", httphandler.KeyPairHandler).Methods("GET")
+	r.HandleFunc("/kp", hhc.KeyPairHandler).Methods("GET")
 
 	// Legacy routes
-	r.HandleFunc("/{uploadKey}/", httphandler.UploadHandler).Methods("GET")
-	r.HandleFunc("/{downloadKey}/json", httphandler.DownloadHandler).Methods("GET")
-	r.HandleFunc("/{downloadKey}/plain/{param}", httphandler.PlainDownloadHandler).Methods("GET")
+	r.HandleFunc("/{uploadKey}/", hhc.UploadHandler).Methods("GET")
+	r.HandleFunc("/{downloadKey}/json", hhc.DownloadHandler).Methods("GET")
+	r.HandleFunc("/{downloadKey}/plain/{param}", hhc.PlainDownloadHandler).Methods("GET")
 
 	// New routes
-	r.HandleFunc("/u/{uploadKey}/", httphandler.UploadHandler).Methods("GET")
-	r.HandleFunc("/d/{downloadKey}/json", httphandler.DownloadHandler).Methods("GET")
-	r.HandleFunc("/d/{downloadKey}/plain/{param}", httphandler.PlainDownloadHandler).Methods("GET")
+	r.HandleFunc("/u/{uploadKey}/", hhc.UploadHandler).Methods("GET")
+	r.HandleFunc("/d/{downloadKey}/json", hhc.DownloadHandler).Methods("GET")
+	r.HandleFunc("/d/{downloadKey}/plain/{param}", hhc.PlainDownloadHandler).Methods("GET")
 	// New routes with nestetd paths, eg. /u/1234/param1
-	r.HandleFunc("/patch/{uploadKey}/{param:.*}", httphandler.UploadAndPatchHandler).Methods("GET")
+	r.HandleFunc("/patch/{uploadKey}/{param:.*}", hhc.UploadAndPatchHandler).Methods("GET")
 
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		key := domain.GenerateRandomKey()
