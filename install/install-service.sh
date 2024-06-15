@@ -14,8 +14,8 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 # Check if binary path is provided
-if [ "$#" -ne 1 ]; then
-    echo "Usage: $0 /path/to/binary"
+if [ "$#" -lt 1 ]; then
+    echo "Usage: $0 /path/to/binary [optional port]"
     exit 1
 fi
 
