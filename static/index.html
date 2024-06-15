@@ -82,6 +82,10 @@
             Just use this url generated just for you: <br>
             <h4>Upload data</h4>
             <a class="dynamic-link" data-path="/u/{{.UploadKey}}/?name=value">/u/{{.UploadKey}}/?name=value</a><br>
+            <h4>Upload data as Patch (to combine multiple values)</h4>
+            <a class="dynamic-link" data-path="/patch/{{.UploadKey}}/?name1=value">/u/{{.UploadKey}}/?name=value</a><br>
+            <a class="dynamic-link" data-path="/patch/{{.UploadKey}}/location_1/?name=value">/u/{{.UploadKey}}/?name=value</a><br>
+            <a class="dynamic-link" data-path="/patch/{{.UploadKey}}/location_2/?name=value">/u/{{.UploadKey}}/?name=value</a><br>
             <h4>Download data</h4>
             and access it with<br>
             <a class="dynamic-link" data-path="/d/{{.DownloadKey}}/plain/name">/d/{{.DownloadKey}}/plain/name</a><br>

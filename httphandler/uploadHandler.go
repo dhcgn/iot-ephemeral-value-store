@@ -103,6 +103,10 @@ func (c Config) handleDataStorage(downloadKey string, paramMap map[string]string
 		}
 	}
 
+	// add timestamp so that root level timestamp is always the latest of any updated value
+	timestamp := time.Now().UTC().Format(time.RFC3339)
+	dataToStore["timestamp"] = timestamp
+
 	return c.StorageInstance.Store(downloadKey, dataToStore)
 }
 
