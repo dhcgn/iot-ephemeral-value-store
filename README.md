@@ -8,9 +8,10 @@ This project provides a simple HTTP server that offers ephemeral storage for IoT
 ## Features
 
 - **Key Pair Generation**: Generate unique upload and download keys for secure data handling.
-- **Data Upload**: Upload data with a simple GET request, using the generated upload key.
+- **Data Upload**: Upload data with a simple GET request using the generated upload key.
 - **Data Retrieval**: Retrieve stored data using the download key, either as JSON or plain text for specific data fields.
-
+- **Patch Feature**: Combine different uploads into a single JSON structure, which can be downloaded with one call.
+- **Privacy**: Separate keys for upload and download to ensure secure and private data handling.
 
 ## HTTP Calls
 
@@ -197,3 +198,5 @@ or as one-liner in a sudo shell:
 sudo -i
 bash <(curl -s https://raw.githubusercontent.com/dhcgn/iot-ephemeral-value-store/main/install/download-and-install.sh)
 ```
+
+![Installation Screesnhot](readme.md-assets\WindowsTerminal_OcSA89D3Ab.png)
