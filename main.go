@@ -138,9 +138,14 @@ func createRouter(hhc httphandler.Config, mc middleware.Config) *mux.Router {
 
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		key := domain.GenerateRandomKey()
+		key_down, err := domain.DeriveDownloadKey(key)
+		if err != nil {
+			http.Error(w, "Error deriving download key", http.StatusInternalServerError)
+			return
+		}
 		data := PageData{
 			UploadKey:      key,
-			DownloadKey:    domain.DeriveDownloadKey(key),
+			DownloadKey:    key_down,
 			DataRentention: persistDuration,
 		}
 		tmpl.Execute(w, data)

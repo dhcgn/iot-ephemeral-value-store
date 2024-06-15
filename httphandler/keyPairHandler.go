@@ -8,7 +8,11 @@ import (
 
 func (c Config) KeyPairHandler(w http.ResponseWriter, r *http.Request) {
 	uploadKey := domain.GenerateRandomKey()
-	downloadKey := domain.DeriveDownloadKey(uploadKey)
+	downloadKey, err := domain.DeriveDownloadKey(uploadKey)
+	if err != nil {
+		http.Error(w, "Error deriving download key", http.StatusInternalServerError)
+		return
+	}
 
 	response := map[string]string{
 		"upload-key":   uploadKey,

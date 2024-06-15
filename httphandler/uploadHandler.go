@@ -26,7 +26,11 @@ func (c Config) UploadAndPatchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Derive the download key from the upload key
-	downloadKey := domain.DeriveDownloadKey(uploadKey)
+	downloadKey, err := domain.DeriveDownloadKey(uploadKey)
+	if err != nil {
+		http.Error(w, "Error deriving download key", http.StatusInternalServerError)
+		return
+	}
 
 	// Parse the duration for setting TTL on data
 	duration, err := time.ParseDuration(c.PersistDuration)
@@ -123,7 +127,11 @@ func (c Config) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Derive the download key from the upload key
-	downloadKey := domain.DeriveDownloadKey(uploadKey)
+	downloadKey, err := domain.DeriveDownloadKey(uploadKey)
+	if err != nil {
+		http.Error(w, "Error deriving download key", http.StatusInternalServerError)
+		return
+	}
 
 	// Parse the duration for setting TTL on data
 	duration, err := time.ParseDuration(c.PersistDuration)
