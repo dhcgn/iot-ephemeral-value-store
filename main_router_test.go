@@ -43,7 +43,7 @@ func TestCreateRouter(t *testing.T) {
 	}{
 		{"GET /", "GET", "/", http.StatusOK},
 		{"GET /kp", "GET", "/kp", http.StatusOK},
-		{"GET /nonexistent", "GET", "/nonexistent", http.StatusNotFound},
+		{"wrong upload key", "GET", "/wrong_upload_key", http.StatusBadRequest},
 	}
 
 	for _, tt := range tests {
@@ -127,6 +127,43 @@ func TestRoutesUploadDownload(t *testing.T) {
 
 			assert.Equal(t, tt.expectedStatusCode, rr.Code)
 			if tt.checkBody {
+				assert.Contains(t, rr.Body.String(), tt.bodyContains)
+			}
+		})
+	}
+}
+
+func TestLegacyRoutesWithDifferentPathEndings(t *testing.T) {
+	httphandlerConfig, middlewareConfig := createTestEnvireonment(t)
+
+	router := createRouter(httphandlerConfig, middlewareConfig)
+
+	tests := []struct {
+		name               string
+		method             string
+		url                string
+		expectedStatusCode int
+		bodyContains       string
+	}{
+		{"Upload Legacy with ending /", "GET", "/" + key_up + "/" + "?value=8923423", http.StatusOK, "Data uploaded successfully"},
+		{"Upload Legacy without ending /", "GET", "/" + key_up + "?value=8923423", http.StatusOK, "Data uploaded successfully"},
+
+		{"Upload with ending /", "GET", "/u/" + key_up + "/" + "?value=8923423", http.StatusOK, "Data uploaded successfully"},
+		{"Upload without ending /", "GET", "/u/" + key_up + "?value=8923423", http.StatusOK, "Data uploaded successfully"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequest(tt.method, tt.url, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			rr := httptest.NewRecorder()
+			router.ServeHTTP(rr, req)
+
+			assert.Equal(t, tt.expectedStatusCode, rr.Code)
+			if tt.bodyContains != "" {
 				assert.Contains(t, rr.Body.String(), tt.bodyContains)
 			}
 		})

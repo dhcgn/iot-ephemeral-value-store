@@ -131,11 +131,13 @@ func createRouter(hhc httphandler.Config, mc middleware.Config) *mux.Router {
 	r.HandleFunc("/kp", hhc.KeyPairHandler).Methods("GET")
 
 	// Legacy routes
+	r.HandleFunc("/{uploadKey}", hhc.UploadHandler).Methods("GET")
 	r.HandleFunc("/{uploadKey}/", hhc.UploadHandler).Methods("GET")
 	r.HandleFunc("/{downloadKey}/json", hhc.DownloadHandler).Methods("GET")
 	r.HandleFunc("/{downloadKey}/plain/{param}", hhc.PlainDownloadHandler).Methods("GET")
 
 	// New routes
+	r.HandleFunc("/u/{uploadKey}", hhc.UploadHandler).Methods("GET")
 	r.HandleFunc("/u/{uploadKey}/", hhc.UploadHandler).Methods("GET")
 	r.HandleFunc("/d/{downloadKey}/json", hhc.DownloadHandler).Methods("GET")
 	r.HandleFunc("/d/{downloadKey}/plain/{param:.*}", hhc.PlainDownloadHandler).Methods("GET")
