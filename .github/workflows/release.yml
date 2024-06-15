@@ -23,11 +23,14 @@ jobs:
         run: go mod tidy
 
       - name: Build binary and set main.Version and main.BuildTime
+        env:
+          CGO_ENABLED: 0
         run: |
           TAG_NAME=${GITHUB_REF#refs/tags/}
           BUILD_TIME=$(date +%Y-%m-%dT%H:%M:%SZ)
           GOOS=linux GOARCH=amd64 go build -ldflags="-w -s -X main.Version=${TAG_NAME} -X main.BuildTime=${BUILD_TIME}" -o iot-ephemeral-value-store-server main.go
           chmod +x iot-ephemeral-value-store-server
+        
 
       - name: Package files
         run: tar czvf iot-ephemeral-value-store-server.tar.gz iot-ephemeral-value-store-server
