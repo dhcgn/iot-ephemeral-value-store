@@ -17,12 +17,12 @@ type StorageInstance struct {
 }
 
 type Storage interface {
-	GetJsonData(downloadKey string) ([]byte, error)
-	StoreData(downloadKey string, dataToStore map[string]interface{}) error
-	RetrieveExistingData(downloadKey string) (map[string]interface{}, error)
+	GetJSON(downloadKey string) ([]byte, error)
+	Store(downloadKey string, dataToStore map[string]interface{}) error
+	Retrieve(downloadKey string) (map[string]interface{}, error)
 }
 
-func NewStorageInstanceInMemory() StorageInstance {
+func NewInMemoryStorage() StorageInstance {
 	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true))
 	if err != nil {
 		log.Fatal(err)
@@ -35,7 +35,7 @@ func NewStorageInstanceInMemory() StorageInstance {
 	}
 }
 
-func NewStorageInstance(storePath string, persistDuration time.Duration) StorageInstance {
+func NewPersistentStorage(storePath string, persistDuration time.Duration) StorageInstance {
 	absStorePath, err := filepath.Abs(storePath)
 	if err != nil {
 		log.Fatalf("Error resolving store path: %s", err)
@@ -59,7 +59,7 @@ func NewStorageInstance(storePath string, persistDuration time.Duration) Storage
 	}
 }
 
-func (c StorageInstance) GetJsonData(downloadKey string) ([]byte, error) {
+func (c StorageInstance) GetJSON(downloadKey string) ([]byte, error) {
 	var jsonData []byte
 	err := c.Db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(downloadKey))
@@ -72,7 +72,7 @@ func (c StorageInstance) GetJsonData(downloadKey string) ([]byte, error) {
 	return jsonData, err
 }
 
-func (c StorageInstance) StoreData(downloadKey string, dataToStore map[string]interface{}) error {
+func (c StorageInstance) Store(downloadKey string, dataToStore map[string]interface{}) error {
 	updatedJSONData, err := json.Marshal(dataToStore)
 	if err != nil {
 		return errors.New("error encoding data to JSON")
@@ -84,7 +84,7 @@ func (c StorageInstance) StoreData(downloadKey string, dataToStore map[string]in
 	})
 }
 
-func (c StorageInstance) RetrieveExistingData(downloadKey string) (map[string]interface{}, error) {
+func (c StorageInstance) Retrieve(downloadKey string) (map[string]interface{}, error) {
 	var existingData map[string]interface{}
 	err := c.Db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(downloadKey))

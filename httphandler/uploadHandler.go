@@ -77,7 +77,7 @@ func (c Config) handleDataStorage(downloadKey string, paramMap map[string]string
 	var dataToStore map[string]interface{}
 
 	if isPatch {
-		existingData, err := c.StorageInstance.RetrieveExistingData(downloadKey)
+		existingData, err := c.StorageInstance.Retrieve(downloadKey)
 		if err != nil {
 			return err
 		}
@@ -90,7 +90,7 @@ func (c Config) handleDataStorage(downloadKey string, paramMap map[string]string
 		}
 	}
 
-	return c.StorageInstance.StoreData(downloadKey, dataToStore)
+	return c.StorageInstance.Store(downloadKey, dataToStore)
 }
 
 func constructAndReturnResponse(w http.ResponseWriter, r *http.Request, downloadKey string, params map[string]string) {

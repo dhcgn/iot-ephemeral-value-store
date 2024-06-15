@@ -12,7 +12,7 @@ import (
 )
 
 func createTestEnvireonment(t *testing.T) (httphandler.Config, middleware.Config) {
-	storageInMemory := storage.NewStorageInstanceInMemory()
+	storageInMemory := storage.NewInMemoryStorage()
 
 	var httphandlerConfig = httphandler.Config{
 		StorageInstance: storageInMemory,

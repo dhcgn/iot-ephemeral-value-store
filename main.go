@@ -70,7 +70,7 @@ func main() {
 		log.Fatalf("Failed to parse duration: %v", err)
 	}
 
-	storage := storage.NewStorageInstance(storePath, persistDuration)
+	storage := storage.NewPersistentStorage(storePath, persistDuration)
 	defer storage.Db.Close()
 
 	httphandlerConfig := httphandler.Config{
