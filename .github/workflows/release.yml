@@ -22,9 +22,11 @@ jobs:
       - name: Get dependencies
         run: go mod tidy
 
-      - name: Build binary
+      - name: Build binary and set main.Version and main.BuildTime
         run: |
-          GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o iot-ephemeral-value-store-server main.go
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          BUILD_TIME=$(date +%Y-%m-%dT%H:%M:%SZ)
+          GOOS=linux GOARCH=amd64 go build -ldflags="-w -s -X main.Version=${TAG_NAME} -X main.BuildTime=${BUILD_TIME}" -o iot-ephemeral-value-store-server main.go
           chmod +x iot-ephemeral-value-store-server
 
       - name: Package files
