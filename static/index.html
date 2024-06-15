@@ -11,8 +11,8 @@
     
     <h2>Getting Started</h2>
     <p>
-        Just use this url generated just for you: <a href="/{{.UploadKey}}/?name=value">/{{.UploadKey}}/?name=value</a> and access it with <a href="/{{.DownloadKey}}/plain/name">/{{.DownloadKey}}/plain/name</a> 
-        or in json with <a href="/{{.DownloadKey}}/json">/{{.DownloadKey}}/json</a> 
+        Just use this url generated just for you: <a href="/u/{{.UploadKey}}/?name=value">/u/{{.UploadKey}}/?name=value</a> and access it with <a href="/d/{{.DownloadKey}}/plain/name">/d/{{.DownloadKey}}/plain/name</a> 
+        or in json with <a href="/d/{{.DownloadKey}}/json">/d/{{.DownloadKey}}/json</a> 
     </p>
 
     <h2>Server Settings</h2>
@@ -24,16 +24,23 @@
     <h2>API Usage</h2>
     <ul>
         <li><strong>Create Key Pair:</strong> <code>GET /kp</code></li>
-        <li><strong>Upload Data:</strong> <code>GET /{upload-key}/?temp=23&hum=43</code></li>
-        <li><strong>Download Data as JSON:</strong> <code>GET /{download-key}/json</code></li>
-        <li><strong>Download Specific Data Field:</strong> <code>GET /{download-key}/plain/{param}</code></li>
+        <li><strong>Upload Data:</strong> <code>GET /u/{upload-key}/?temp=23&hum=43</code></li>
+        <li><strong>Download Data as JSON:</strong> <code>GET /d/{download-key}/json</code></li>
+        <li><strong>Download Specific Data Field:</strong> <code>GET /d/{download-key}/plain/{param}</code></li>
+    </ul>
+
+    <h2>Advanced API Usage - Patch with same {upload-key}</h2>
+    <ul>
+        <li><strong>Patch Data:</strong> <code>GET /patch/{upload-key}/house_1/?temp=23&hum=43</code></li>
+        <li><strong>Patch Data:</strong> <code>GET /patch/{upload-key}/house_1/?volatage=230</code></li>
+        <li><strong>Patch Data:</strong> <code>GET /patch/{upload-key}/house_2/basement/roomt1/?volatage=230</code></li>
     </ul>
 
     <h2>API Example, with static keys!</h2>
     <ul>
-        <li><strong>Upload Data:</strong> <a href="/5347d61e218f9a7988292c82ddfe347a276fcb82dd2df8aaad733c8970379f41/?temp=23&hum=43">/5347d61e218f9a7988292c82ddfe347a276fcb82dd2df8aaad733c8970379f41/?temp=23&hum=43</a></li>
-        <li><strong>Download Data as JSON:</strong> <a href="/39077ff759b3bbd0592728cbd16aab9e061328bbbffb740923337b23fdd0ad39/json">/39077ff759b3bbd0592728cbd16aab9e061328bbbffb740923337b23fdd0ad39/json</a></li>
-        <li><strong>Download Specific Data Field:</strong><a href="/39077ff759b3bbd0592728cbd16aab9e061328bbbffb740923337b23fdd0ad39/plain/hum">/39077ff759b3bbd0592728cbd16aab9e061328bbbffb740923337b23fdd0ad39/plain/hum</a> </li>
+        <li><strong>Upload Data:</strong> <a href="/u/5347d61e218f9a7988292c82ddfe347a276fcb82dd2df8aaad733c8970379f41/?temp=23&hum=43">/u/5347d61e218f9a7988292c82ddfe347a276fcb82dd2df8aaad733c8970379f41/?temp=23&hum=43</a></li>
+        <li><strong>Download Data as JSON:</strong> <a href="/d/39077ff759b3bbd0592728cbd16aab9e061328bbbffb740923337b23fdd0ad39/json">/u/39077ff759b3bbd0592728cbd16aab9e061328bbbffb740923337b23fdd0ad39/json</a></li>
+        <li><strong>Download Specific Data Field:</strong><a href="/d/39077ff759b3bbd0592728cbd16aab9e061328bbbffb740923337b23fdd0ad39/plain/hum">/d/39077ff759b3bbd0592728cbd16aab9e061328bbbffb740923337b23fdd0ad39/plain/hum</a> </li>
     </ul>
 
     <p>
