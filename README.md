@@ -190,3 +190,10 @@ iot-ephemeral-value-store-server -persist-values-for 1d -store ~/iot-ephemeral-v
 ```bash
 sudo ./install-service.sh /path/to/iot-ephemeral-value-store-server
 ```
+
+or as one-liner in a sudo shell:
+
+```bash
+sudo -i
+bash <(curl -s https://raw.githubusercontent.com/dhcgn/iot-ephemeral-value-store/main/install/download-and-install.sh)
+```
