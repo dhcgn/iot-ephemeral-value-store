@@ -15,6 +15,8 @@ if (-Not (Test-Path $outputDir)) {
 
 # Build the application
 Write-Host "Building application for Linux AMD64..."
+
+$env:CGO_ENABLED = 0
 go build -ldflags="-w -s" -o "$outputDir/$binaryName" .
 
 # Check if the build was successful

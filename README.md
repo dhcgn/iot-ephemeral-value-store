@@ -74,6 +74,17 @@ curl http://127.0.0.1:8080/62fb66ee6841600228945ef592c8998e097c51271f9acf1f15e72
 12
 ```
 
+#### Delete Value
+
+```bash
+# delete everything with this upload key
+curl -s https://your-server.com/delete/1e1c7e5f220d2eee5ebbfd1428b84aaf1570ca4f88105a81feac901850b20a77
+```
+
+```plain
+OK
+```
+
 ### Create Key Pair
 
 The upload key is just random data with a length of 256bit encoded in hex, the download key is derived a each upload time. The download key is just a hashed upload key with sha256.

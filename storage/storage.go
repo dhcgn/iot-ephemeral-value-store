@@ -18,6 +18,7 @@ type StorageInstance struct {
 
 type Storage interface {
 	GetJSON(downloadKey string) ([]byte, error)
+	Delete(downloadKey string) error
 	Store(downloadKey string, dataToStore map[string]interface{}) error
 	Retrieve(downloadKey string) (map[string]interface{}, error)
 }
@@ -102,4 +103,10 @@ func (c StorageInstance) Retrieve(downloadKey string) (map[string]interface{}, e
 		return json.Unmarshal(jsonData, &existingData)
 	})
 	return existingData, err
+}
+
+func (c StorageInstance) Delete(downloadKey string) error {
+	return c.Db.Update(func(txn *badger.Txn) error {
+		return txn.Delete([]byte(downloadKey))
+	})
 }

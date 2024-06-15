@@ -123,10 +123,15 @@ func createRouter(hhc httphandler.Config, mc middleware.Config) *mux.Router {
 	// New routes
 	r.HandleFunc("/u/{uploadKey}", hhc.UploadHandler).Methods("GET")
 	r.HandleFunc("/u/{uploadKey}/", hhc.UploadHandler).Methods("GET")
+
 	r.HandleFunc("/d/{downloadKey}/json", hhc.DownloadHandler).Methods("GET")
 	r.HandleFunc("/d/{downloadKey}/plain/{param:.*}", hhc.PlainDownloadHandler).Methods("GET")
 	// New routes with nestetd paths, eg. /u/1234/param1
 	r.HandleFunc("/patch/{uploadKey}/{param:.*}", hhc.UploadAndPatchHandler).Methods("GET")
+
+	// Admin
+	r.HandleFunc("/delete/{uploadKey}", hhc.DeleteHandler).Methods("GET")
+	r.HandleFunc("/delete/{uploadKey}/", hhc.DeleteHandler).Methods("GET")
 
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		key := domain.GenerateRandomKey()

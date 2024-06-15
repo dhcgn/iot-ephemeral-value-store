@@ -74,9 +74,9 @@ func TestLegacyRoutes(t *testing.T) {
 		checkBody          bool
 		bodyContains       string
 	}{
-		{"GET /", "GET", "/" + key_up + "/" + "?value=8923423", http.StatusOK, true, "Data uploaded successfully"},
-		{"GET /", "GET", "/" + key_down + "/" + "plain/value", http.StatusOK, true, "8923423\n"},
-		{"GET /", "GET", "/" + key_down + "/" + "json", http.StatusOK, true, "\"value\":\"8923423\""},
+		{"Upload", "GET", "/" + key_up + "/" + "?value=8923423", http.StatusOK, true, "Data uploaded successfully"},
+		{"Download Plain", "GET", "/" + key_down + "/" + "plain/value", http.StatusOK, true, "8923423\n"},
+		{"Downlaod JSON", "GET", "/" + key_down + "/" + "json", http.StatusOK, true, "\"value\":\"8923423\""},
 	}
 
 	for _, tt := range tests {
@@ -127,6 +127,43 @@ func TestRoutesUploadDownload(t *testing.T) {
 
 			assert.Equal(t, tt.expectedStatusCode, rr.Code)
 			if tt.checkBody {
+				assert.Contains(t, rr.Body.String(), tt.bodyContains)
+			}
+		})
+	}
+}
+
+func TestRoutesUploadDownloadDelete(t *testing.T) {
+	httphandlerConfig, middlewareConfig := createTestEnvireonment(t)
+
+	router := createRouter(httphandlerConfig, middlewareConfig)
+
+	tests := []struct {
+		name               string
+		url                string
+		expectedStatusCode int
+		bodyContains       string
+	}{
+		{"Upload", "/u/" + key_up + "/" + "?value=8923423", http.StatusOK, "Data uploaded successfully"},
+		{"Download plain", "/d/" + key_down + "/" + "plain/value", http.StatusOK, "8923423\n"},
+		{"Download json", "/d/" + key_down + "/" + "json", http.StatusOK, "\"value\":\"8923423\""},
+		{"Delete", "/delete/" + key_up + "/", http.StatusOK, "OK"},
+		{"Download after delete plain", "/d/" + key_down + "/" + "plain/value", http.StatusNotFound, ""},
+		{"Download after delete json", "/d/" + key_down + "/" + "json", http.StatusNotFound, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequest("GET", tt.url, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			rr := httptest.NewRecorder()
+			router.ServeHTTP(rr, req)
+
+			assert.Equal(t, tt.expectedStatusCode, rr.Code)
+			if tt.bodyContains != "" {
 				assert.Contains(t, rr.Body.String(), tt.bodyContains)
 			}
 		})
