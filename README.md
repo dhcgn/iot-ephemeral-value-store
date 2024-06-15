@@ -1,3 +1,6 @@
+[![Go](https://github.com/dhcgn/iot-ephemeral-value-store/actions/workflows/build_and_test.yml/badge.svg)](https://github.com/dhcgn/iot-ephemeral-value-store/actions/workflows/build_and_test.yml)
+[![Coverage Status](https://coveralls.io/repos/github/dhcgn/iot-ephemeral-value-store/badge.svg?branch=main)](https://coveralls.io/github/dhcgn/iot-ephemeral-value-store?branch=main)
+
 # iot-ephemeral-value-store
 
 This project provides a simple HTTP server that offers ephemeral storage for IoT data. It generates unique key pairs for data upload and retrieval, stores data temporarily based on a configurable duration, and allows data to be fetched in both JSON and plain text formats.
