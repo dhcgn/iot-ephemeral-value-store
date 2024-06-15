@@ -8,11 +8,71 @@ This project provides a simple HTTP server that offers ephemeral storage for IoT
 ## Features
 
 - **Key Pair Generation**: Generate unique upload and download keys for secure data handling.
-- **Data Upload**: Upload data with a simple GET request, using the generated upload key.
+- **Data Upload**: Upload data with a simple GET request using the generated upload key.
 - **Data Retrieval**: Retrieve stored data using the download key, either as JSON or plain text for specific data fields.
-
+- **Patch Feature**: Combine different uploads into a single JSON structure, which can be downloaded with one call.
+- **Privacy**: Separate keys for upload and download to ensure secure and private data handling.
 
 ## HTTP Calls
+
+### Simple Curl Examples
+
+#### Create Key Pair
+
+> The use of `jq` is optional, but it makes the output more readable.	
+
+```bash
+# Create a key pair
+curl -s https://your-server.com/kp | jq
+```
+
+```json
+{
+  "download-key": "62fb66ee6841600228945ef592c8998e097c51271f9acf1f15e72363451a7910",
+  "upload-key": "1e1c7e5f220d2eee5ebbfd1428b84aaf1570ca4f88105a81feac901850b20a77"
+}
+```
+
+#### Upload Value
+
+```bash
+# Upload a value
+curl -s https://your-server.com/u/1e1c7e5f220d2eee5ebbfd1428b84aaf1570ca4f88105a81feac901850b20a77?tempC=12 | jq
+```
+
+```json
+{
+  "download_url": "http://127.0.0.1:8080/62fb66ee6841600228945ef592c8998e097c51271f9acf1f15e72363451a7910/json",
+  "message": "Data uploaded successfully",
+  "parameter_urls": {
+    "tempC": "http://127.0.0.1:8080/62fb66ee6841600228945ef592c8998e097c51271f9acf1f15e72363451a7910/plain/tempC"
+  }
+}
+```
+
+
+#### Download Value
+
+```bash
+# Download the value as json
+curl http://127.0.0.1:8080/62fb66ee6841600228945ef592c8998e097c51271f9acf1f15e72363451a7910/json | jq
+```
+
+```json
+{
+  "tempC": "12",
+  "timestamp": "2024-06-15T10:37:28Z"
+}
+```
+
+```bash
+# Download the value as plain text
+curl http://127.0.0.1:8080/62fb66ee6841600228945ef592c8998e097c51271f9acf1f15e72363451a7910/plain/tempC
+```
+
+```plain
+12
+```
 
 ### Create Key Pair
 
@@ -56,45 +116,6 @@ echo "Download Key: $download_key"
 # Example output:
 # Upload Key: 1326a51edc413cbd5cb09961e6fc655b8e30aca8eb4a46be2e6aa329da31709f
 # Download Key: 4698f8edcc24806c2e57b9db57e7958299982a0cc325b00163300d0cb2828a57
-```
-
-
-### Upload Values
-
-- {upload-key} must be a hex 256bit representation
-
-```http
-GET https://your-server.com/u/{upload-key}/?temp=23&hum=43
-
-200 OK
-{
-  "download_url": "http://127.0.0.1:8080/d/{download-key}/json",
-  "message": "Data uploaded successfully",
-  "parameter_urls": {
-    "hum": "http://127.0.0.1:8080/d/{download-key}/plain/hum",
-    "temp": "http://127.0.0.1:8080/d/{download-key}/plain/temp"
-  }
-}
-```
-
-### Download Values
-
-```http
-GET https://your-server.com/d/{download-key}/json
-
-200 OK
-{
-  "temp": "23",
-  "hum": "43",
-  "timestamp": "2024-06-14T12:12:36Z"
-}
-```
-
-```http
-GET https://your-server.com/d/{download-key}/plain/hum
-
-200 OK
-43
 ```
 
 ### Patch Values
@@ -190,3 +211,12 @@ iot-ephemeral-value-store-server -persist-values-for 1d -store ~/iot-ephemeral-v
 ```bash
 sudo ./install-service.sh /path/to/iot-ephemeral-value-store-server
 ```
+
+or as one-liner in a sudo shell:
+
+```bash
+sudo -i
+bash <(curl -s https://raw.githubusercontent.com/dhcgn/iot-ephemeral-value-store/main/install/download-and-install.sh)
+```
+
+![Installation Screesnhot](readme.md-assets\WindowsTerminal_OcSA89D3Ab.png)
