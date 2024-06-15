@@ -80,11 +80,15 @@
         <h2>Getting Started</h2>
         <p>
             Just use this url generated just for you: <br>
+            <h4>Upload data</h4>
             <a class="dynamic-link" data-path="/u/{{.UploadKey}}/?name=value">/u/{{.UploadKey}}/?name=value</a><br>
+            <h4>Download data</h4>
             and access it with<br>
             <a class="dynamic-link" data-path="/d/{{.DownloadKey}}/plain/name">/d/{{.DownloadKey}}/plain/name</a><br>
             or in json with<br>
             <a class="dynamic-link" data-path="/d/{{.DownloadKey}}/json">/d/{{.DownloadKey}}/json</a>
+            <h4>Delete data (or wait for retention time)</h4>
+            <a class="dynamic-link" data-path="/delete/{{.UploadKey}}">/u/{{.UploadKey}}/?name=value</a><br>
         </p>
 
         <h2>Server Settings</h2>
