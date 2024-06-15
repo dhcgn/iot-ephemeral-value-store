@@ -222,6 +222,7 @@ func TestRoutesPatchDownload(t *testing.T) {
 		bodyNotContains    string
 	}{
 		{"Upload patch level 0", "GET", "/patch/" + key_up + "/" + "?value=1_4324232", http.StatusOK, true, "Data uploaded successfully", ""},
+		{"Upload patch level 0 no /", "GET", "/patch/" + key_up + "?value_temp=1_4324232", http.StatusOK, true, "Data uploaded successfully", ""},
 		{"Upload patch level 2", "GET", "/patch/" + key_up + "/1/2" + "?value=2_8923423", http.StatusOK, true, "Data uploaded successfully", ""},
 
 		{"Download plain level 0", "GET", "/d/" + key_down + "/" + "plain/value", http.StatusOK, true, "1_4324232\n", ""},
