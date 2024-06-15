@@ -45,7 +45,7 @@ func (c Config) handleUpload(w http.ResponseWriter, r *http.Request, uploadKey, 
 	paramMap := collectParams(r.URL.Query())
 
 	// Add timestamp to params
-	addTimestamp(paramMap)
+	addTimestamp(paramMap, path)
 
 	// Handle data storage
 	if err := c.handleDataStorage(downloadKey, paramMap, path, isPatch); err != nil {
@@ -68,7 +68,20 @@ func collectParams(params map[string][]string) map[string]string {
 	return paramMap
 }
 
-func addTimestamp(paramMap map[string]string) {
+func addTimestamp(paramMap map[string]string, path string) {
+	// if using patch and path is empty than add a timestamp with the value suffix
+	if path == "" {
+		allKeys := make([]string, 0, len(paramMap))
+		for k := range paramMap {
+			allKeys = append(allKeys, k)
+		}
+		// add a timestamp with the value suffix for all keys
+		timestamp := time.Now().UTC().Format(time.RFC3339)
+		for _, k := range allKeys {
+			paramMap[k+"_timestamp"] = timestamp
+		}
+	}
+
 	timestamp := time.Now().UTC().Format(time.RFC3339)
 	paramMap["timestamp"] = timestamp
 }
