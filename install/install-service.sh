@@ -5,6 +5,7 @@ SERVICE_NAME="iot-ephemeral-value-store-server"
 USER="root"
 GROUP="root"
 DEFAULT_STORE_PATH="/var/lib/iot-ephemeral-value-store"
+DEFAULT_PORT=8080
 
 # Check if running as root
 if [ "$(id -u)" != "0" ]; then
@@ -19,6 +20,18 @@ if [ "$#" -ne 1 ]; then
 fi
 
 BINARY_PATH=$1
+
+# Check if optional port is provided set to default port 8080
+if [ "$#" -eq 2 ]; then
+    # check if this is a valid port number
+    if ! [[ $2 =~ ^[0-9]+$ ]] || [ $2 -lt 1 ] || [ $2 -gt 65535 ]; then
+        echo "Error: Invalid port number"
+        exit 1
+    fi
+    PORT=$2
+else
+    PORT=$DEFAULT_PORT
+fi
 
 # Validate that the binary exists
 if [ ! -f "$BINARY_PATH" ]; then
@@ -56,7 +69,7 @@ After=network.target
 Type=simple
 User=$USER
 Group=$GROUP
-ExecStart=$INSTALL_PATH -store $DEFAULT_STORE_PATH
+ExecStart=$INSTALL_PATH -store $DEFAULT_STORE_PATH -port $PORT
 Restart=on-failure
 
 [Install]
