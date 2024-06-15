@@ -1,12 +1,8 @@
 package httphandler
 
 import (
-	"encoding/hex"
-	"errors"
 	"fmt"
 	"net/http"
-	"strings"
-	"time"
 
 	"github.com/dhcgn/iot-ephemeral-value-store/domain"
 	"github.com/gorilla/mux"
@@ -29,7 +25,7 @@ func (c Config) UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 func (c Config) handleUpload(w http.ResponseWriter, r *http.Request, uploadKey, path string, isPatch bool) {
 	// Validate upload key
-	if err := ValidateUploadKey(uploadKey); err != nil {
+	if err := domain.ValidateUploadKey(uploadKey); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -45,69 +41,18 @@ func (c Config) handleUpload(w http.ResponseWriter, r *http.Request, uploadKey, 
 	paramMap := collectParams(r.URL.Query())
 
 	// Add timestamp to params
-	addTimestamp(paramMap, path)
+	addTimestampToThisData(paramMap, path)
 
 	// Handle data storage
-	if err := c.handleDataStorage(downloadKey, paramMap, path, isPatch); err != nil {
+	data, err := c.modifyData(downloadKey, paramMap, path, isPatch)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	c.StorageInstance.Store(downloadKey, data)
 
 	// Construct and return response
 	constructAndReturnResponse(w, r, downloadKey, paramMap)
-}
-
-func collectParams(params map[string][]string) map[string]string {
-	paramMap := make(map[string]string)
-	for key, values := range params {
-		if len(values) > 0 {
-			sanitizedValue := sanitizeInput(values[0])
-			paramMap[key] = sanitizedValue
-		}
-	}
-	return paramMap
-}
-
-func addTimestamp(paramMap map[string]string, path string) {
-	// if using patch and path is empty than add a timestamp with the value suffix
-	if path == "" {
-		allKeys := make([]string, 0, len(paramMap))
-		for k := range paramMap {
-			allKeys = append(allKeys, k)
-		}
-		// add a timestamp with the value suffix for all keys
-		timestamp := time.Now().UTC().Format(time.RFC3339)
-		for _, k := range allKeys {
-			paramMap[k+"_timestamp"] = timestamp
-		}
-	}
-
-	timestamp := time.Now().UTC().Format(time.RFC3339)
-	paramMap["timestamp"] = timestamp
-}
-
-func (c Config) handleDataStorage(downloadKey string, paramMap map[string]string, path string, isPatch bool) error {
-	var dataToStore map[string]interface{}
-
-	if isPatch {
-		existingData, err := c.StorageInstance.Retrieve(downloadKey)
-		if err != nil {
-			return err
-		}
-		mergeData(existingData, paramMap, strings.Split(path, "/"))
-		dataToStore = existingData
-	} else {
-		dataToStore = make(map[string]interface{})
-		for k, v := range paramMap {
-			dataToStore[k] = v
-		}
-	}
-
-	// add timestamp so that root level timestamp is always the latest of any updated value
-	timestamp := time.Now().UTC().Format(time.RFC3339)
-	dataToStore["timestamp"] = timestamp
-
-	return c.StorageInstance.Store(downloadKey, dataToStore)
 }
 
 func constructAndReturnResponse(w http.ResponseWriter, r *http.Request, downloadKey string, params map[string]string) {
@@ -123,36 +68,4 @@ func constructAndReturnResponse(w http.ResponseWriter, r *http.Request, download
 		"download_url":   downloadURL,
 		"parameter_urls": urls,
 	})
-}
-
-func mergeData(existingData map[string]interface{}, newData map[string]string, path []string) {
-	if len(path) == 0 || (len(path) == 1 && path[0] == "") {
-		for k, v := range newData {
-			existingData[k] = v
-		}
-		return
-	}
-
-	currentKey := path[0]
-	if _, exists := existingData[currentKey]; !exists {
-		existingData[currentKey] = make(map[string]interface{})
-	}
-
-	if nestedMap, ok := existingData[currentKey].(map[string]interface{}); ok {
-		mergeData(nestedMap, newData, path[1:])
-	} else {
-		existingData[currentKey] = newData
-	}
-}
-
-func ValidateUploadKey(uploadKey string) error {
-	uploadKey = strings.ToLower(uploadKey)
-	decoded, err := hex.DecodeString(uploadKey)
-	if err != nil {
-		return errors.New("uploadKey must be a 256 bit hex string")
-	}
-	if len(decoded) != 32 {
-		return errors.New("uploadKey must be a 256 bit hex string")
-	}
-	return nil
 }
