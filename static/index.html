@@ -1,55 +1,136 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IoT Ephemeral Value Store Server</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+
+        h1,
+        h2 {
+            color: #2c3e50;
+        }
+
+        h1 {
+            margin-top: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        p,
+        ul {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
+        a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        code {
+            background-color: #ecf0f1;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        @media (max-width: 800px) {
+            .container {
+                padding: 0 10px;
+            }
+        }
+    </style>
 </head>
+
 <body>
     <h1>Welcome to the IoT Ephemeral Value Store Server</h1>
-    <p>This service allows you to temporarily store and retrieve IoT data via HTTP. Below are some examples of how you can interact with the server:</p>
-    
-    <h2>Getting Started</h2>
-    <p>
-        Just use this url generated just for you: <a href="/u/{{.UploadKey}}/?name=value">/u/{{.UploadKey}}/?name=value</a> and access it with <a href="/d/{{.DownloadKey}}/plain/name">/d/{{.DownloadKey}}/plain/name</a> 
-        or in json with <a href="/d/{{.DownloadKey}}/json">/d/{{.DownloadKey}}/json</a> 
-    </p>
+    <div class="container">
+        <p>This service allows you to temporarily store and retrieve IoT data via HTTP. Below are some examples of how
+            you can interact with the server:</p>
 
-    <h2>Server Settings</h2>
-    <ul>
-        <li><strong>Data rentention:</strong> {{.DataRentention}}</li>
-    </ul>
+        <h2>Getting Started</h2>
+        <p>
+            Just use this url generated just for you: <br>
+            <a class="dynamic-link" data-path="/u/{{.UploadKey}}/?name=value">/u/{{.UploadKey}}/?name=value</a><br>
+            and access it with<br>
+            <a class="dynamic-link" data-path="/d/{{.DownloadKey}}/plain/name">/d/{{.DownloadKey}}/plain/name</a><br>
+            or in json with<br>
+            <a class="dynamic-link" data-path="/d/{{.DownloadKey}}/json">/d/{{.DownloadKey}}/json</a>
+        </p>
 
+        <h2>Server Settings</h2>
+        <ul>
+            <li><strong>Software Version:</strong> {{.Version}}</li>
+            <li><strong>Software BuildTime:</strong> {{.BuildTime}}</li>
+            <li><strong>Data retention:</strong> {{.DataRetention}}</li>
+        </ul>
 
-    <h2>API Usage</h2>
-    <ul>
-        <li><strong>Create Key Pair:</strong> <code>GET /kp</code></li>
-        <li><strong>Upload Data:</strong> <code>GET /u/{upload-key}/?temp=23&hum=43</code></li>
-        <li><strong>Download Data as JSON:</strong> <code>GET /d/{download-key}/json</code></li>
-        <li><strong>Download Specific Data Field:</strong> <code>GET /d/{download-key}/plain/{param}</code></li>
-    </ul>
+        <h2>API Usage</h2>
+        <ul>
+            <li><strong>Create Key Pair:</strong> <code>GET /kp</code></li>
+            <li><strong>Upload Data:</strong> <code>GET /u/{upload-key}/?temp=23&hum=43</code></li>
+            <li><strong>Download Data as JSON:</strong> <code>GET /d/{download-key}/json</code></li>
+            <li><strong>Download Specific Data Field:</strong> <code>GET /d/{download-key}/plain/{param}</code></li>
+        </ul>
 
-    <h2>Advanced API Usage - Patch with same {upload-key}</h2>
-    <ul>
-        <li><strong>Patch Data:</strong> <code>GET /patch/{upload-key}/house_1/?temp=23&hum=43</code></li>
-        <li><strong>Patch Data:</strong> <code>GET /patch/{upload-key}/house_1/?volatage=230</code></li>
-        <li><strong>Patch Data:</strong> <code>GET /patch/{upload-key}/house_2/basement/roomt1/?volatage=230</code></li>
-    </ul>
+        <h2>Advanced API Usage - Patch with same {upload-key}</h2>
+        <ul>
+            <li><strong>Patch Data:</strong> <code>GET /patch/{upload-key}/house_1/?temp=23&hum=43</code></li>
+            <li><strong>Patch Data:</strong> <code>GET /patch/{upload-key}/house_1/?voltage=230</code></li>
+            <li><strong>Patch Data:</strong> <code>GET /patch/{upload-key}/house_2/basement/room1/?voltage=230</code>
+            </li>
+        </ul>
 
-    <h2>API Example, with static keys!</h2>
-    <ul>
-        <li><strong>Upload Data:</strong> <a href="/u/5347d61e218f9a7988292c82ddfe347a276fcb82dd2df8aaad733c8970379f41/?temp=23&hum=43">/u/5347d61e218f9a7988292c82ddfe347a276fcb82dd2df8aaad733c8970379f41/?temp=23&hum=43</a></li>
-        <li><strong>Download Data as JSON:</strong> <a href="/d/39077ff759b3bbd0592728cbd16aab9e061328bbbffb740923337b23fdd0ad39/json">/u/39077ff759b3bbd0592728cbd16aab9e061328bbbffb740923337b23fdd0ad39/json</a></li>
-        <li><strong>Download Specific Data Field:</strong><a href="/d/39077ff759b3bbd0592728cbd16aab9e061328bbbffb740923337b23fdd0ad39/plain/hum">/d/39077ff759b3bbd0592728cbd16aab9e061328bbbffb740923337b23fdd0ad39/plain/hum</a> </li>
-    </ul>
+        <h2>Tipps</h2>
 
-    <p>
-        The download key can be derived from the upload key. 
-        <code>echo -n  "5347d61e218f9a7988292c82ddfe347a276fcb82dd2df8aaad733c8970379f41" | sha256sum</code>
-    </p>
+        <p>
+            The download key can be derived from the upload key.
+            <code>echo -n "5347d61e218f9a7988292c82ddfe347a276fcb82dd2df8aaad733c8970379f41" | sha256sum</code>
+        </p>
 
-    <h2>GitHub Repository</h2>
-    <p>You can find the source code and contribute to this project on GitHub:</p>
-    <a href="https://github.com/dhcgn/iot-ephemeral-value-store">IoT Ephemeral Value Store Server on GitHub</a>
+        <h2>GitHub Repository</h2>
+        <p>You can find the source code and contribute to this project on GitHub:</p>
+        <a href="https://github.com/dhcgn/iot-ephemeral-value-store">IoT Ephemeral Value Store Server on GitHub</a>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const baseUrl = window.location.origin;
+            document.querySelectorAll('a.dynamic-link').forEach(link => {
+                const path = link.getAttribute('data-path');
+                link.href = baseUrl + path;
+                link.textContent = baseUrl + path;
+            });
+        });
+    </script>
 </body>
+
 </html>

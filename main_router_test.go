@@ -5,17 +5,17 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/dgraph-io/badger/v3"
 	"github.com/dhcgn/iot-ephemeral-value-store/httphandler"
 	"github.com/dhcgn/iot-ephemeral-value-store/middleware"
+	"github.com/dhcgn/iot-ephemeral-value-store/storage"
 	"github.com/stretchr/testify/assert"
 )
 
 func createTestEnvireonment(t *testing.T) (httphandler.Config, middleware.Config) {
-	db := setupTestDB(t)
+	storageInMemory := storage.NewInMemoryStorage()
+
 	var httphandlerConfig = httphandler.Config{
-		Db:              db,
-		PersistDuration: DefaultPersistDuration,
+		StorageInstance: storageInMemory,
 	}
 
 	var middlewareConfig = middleware.Config{
@@ -43,7 +43,7 @@ func TestCreateRouter(t *testing.T) {
 	}{
 		{"GET /", "GET", "/", http.StatusOK},
 		{"GET /kp", "GET", "/kp", http.StatusOK},
-		{"GET /nonexistent", "GET", "/nonexistent", http.StatusNotFound},
+		{"wrong upload key", "GET", "/wrong_upload_key", http.StatusBadRequest},
 	}
 
 	for _, tt := range tests {
@@ -133,6 +133,43 @@ func TestRoutesUploadDownload(t *testing.T) {
 	}
 }
 
+func TestLegacyRoutesWithDifferentPathEndings(t *testing.T) {
+	httphandlerConfig, middlewareConfig := createTestEnvireonment(t)
+
+	router := createRouter(httphandlerConfig, middlewareConfig)
+
+	tests := []struct {
+		name               string
+		method             string
+		url                string
+		expectedStatusCode int
+		bodyContains       string
+	}{
+		{"Upload Legacy with ending /", "GET", "/" + key_up + "/" + "?value=8923423", http.StatusOK, "Data uploaded successfully"},
+		{"Upload Legacy without ending /", "GET", "/" + key_up + "?value=8923423", http.StatusOK, "Data uploaded successfully"},
+
+		{"Upload with ending /", "GET", "/u/" + key_up + "/" + "?value=8923423", http.StatusOK, "Data uploaded successfully"},
+		{"Upload without ending /", "GET", "/u/" + key_up + "?value=8923423", http.StatusOK, "Data uploaded successfully"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequest(tt.method, tt.url, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			rr := httptest.NewRecorder()
+			router.ServeHTTP(rr, req)
+
+			assert.Equal(t, tt.expectedStatusCode, rr.Code)
+			if tt.bodyContains != "" {
+				assert.Contains(t, rr.Body.String(), tt.bodyContains)
+			}
+		})
+	}
+}
+
 func TestRoutesPatchDownload(t *testing.T) {
 	httphandlerConfig, middlewareConfig := createTestEnvireonment(t)
 
@@ -147,15 +184,15 @@ func TestRoutesPatchDownload(t *testing.T) {
 		bodyContains       string
 		bodyNotContains    string
 	}{
-		{"GET patch level 0", "GET", "/patch/" + key_up + "/" + "?value=1_4324232", http.StatusOK, true, "Data uploaded successfully", ""},
-		{"GET patch level 2", "GET", "/patch/" + key_up + "/1/2" + "?value=2_8923423", http.StatusOK, true, "Data uploaded successfully", ""},
+		{"Upload patch level 0", "GET", "/patch/" + key_up + "/" + "?value=1_4324232", http.StatusOK, true, "Data uploaded successfully", ""},
+		{"Upload patch level 2", "GET", "/patch/" + key_up + "/1/2" + "?value=2_8923423", http.StatusOK, true, "Data uploaded successfully", ""},
 
-		{"GET d plain level 0", "GET", "/d/" + key_down + "/" + "plain/value", http.StatusOK, true, "1_4324232\n", ""},
-		{"GET d plain level 2", "GET", "/d/" + key_down + "/" + "plain/1/2/value", http.StatusOK, true, "2_8923423\n", ""},
+		{"Download plain level 0", "GET", "/d/" + key_down + "/" + "plain/value", http.StatusOK, true, "1_4324232\n", ""},
+		{"Download plain level 2", "GET", "/d/" + key_down + "/" + "plain/1/2/value", http.StatusOK, true, "2_8923423\n", ""},
 
-		{"GET d json level 0", "GET", "/d/" + key_down + "/" + "json", http.StatusOK, true, "\"value\":\"1_4324232\"", ""},
-		{"GET d json level 2", "GET", "/d/" + key_down + "/" + "json", http.StatusOK, true, "\"value\":\"2_8923423\"", ""},
-		{"GET d not contains empty key", "GET", "/d/" + key_down + "/" + "json", http.StatusOK, false, "", "\"\""},
+		{"Download json level 0", "GET", "/d/" + key_down + "/" + "json", http.StatusOK, true, "\"value\":\"1_4324232\"", ""},
+		{"Download json level 2", "GET", "/d/" + key_down + "/" + "json", http.StatusOK, true, "\"value\":\"2_8923423\"", ""},
+		{"Download not contains empty key", "GET", "/d/" + key_down + "/" + "json", http.StatusOK, false, "", "\"\""},
 	}
 
 	for _, tt := range tests {
@@ -178,13 +215,4 @@ func TestRoutesPatchDownload(t *testing.T) {
 			}
 		})
 	}
-}
-
-func setupTestDB(t *testing.T) *badger.DB {
-	opts := badger.DefaultOptions("").WithInMemory(true)
-	db, err := badger.Open(opts)
-	if err != nil {
-		t.Fatalf("Failed to open Badger database: %v", err)
-	}
-	return db
 }

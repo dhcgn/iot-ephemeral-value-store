@@ -1,4 +1,4 @@
-$server= 'http://127.0.0.1:8080'
+$server= 'http://127.0.0.1:8088' # port from the vscode task
 
 #
 # Test Case 1

@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"text/template"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/dhcgn/iot-ephemeral-value-store/domain"
 	"github.com/dhcgn/iot-ephemeral-value-store/httphandler"
 	"github.com/dhcgn/iot-ephemeral-value-store/middleware"
+	"github.com/dhcgn/iot-ephemeral-value-store/storage"
 	"github.com/gorilla/mux"
 )
 
@@ -41,15 +41,21 @@ const (
 var staticFiles embed.FS
 
 var (
-	persistDuration string
-	storePath       string
-	port            int
-	db              *badger.DB
+	persistDurationString string
+	storePath             string
+	port                  int
+	db                    *badger.DB
+)
+
+// Set in build time
+var (
+	Version   string = "dev"
+	BuildTime string = "unknown"
 )
 
 func initFlags() {
 	myFlags := flag.NewFlagSet("iot-ephemeral-value-store", flag.ExitOnError)
-	myFlags.StringVar(&persistDuration, "persist-values-for", DefaultPersistDuration, "Duration for which the values are stored before they are deleted.")
+	myFlags.StringVar(&persistDurationString, "persist-values-for", DefaultPersistDuration, "Duration for which the values are stored before they are deleted.")
 	myFlags.StringVar(&storePath, "store", DefaultStorePath, "Path to the directory where the values will be stored.")
 	myFlags.IntVar(&port, "port", DefaultPort, "The port number on which the server will listen.")
 
@@ -59,12 +65,16 @@ func initFlags() {
 func main() {
 	initFlags()
 
-	db := createDatabase()
-	defer db.Close()
+	persistDuration, err := time.ParseDuration(persistDurationString)
+	if err != nil {
+		log.Fatalf("Failed to parse duration: %v", err)
+	}
+
+	storage := storage.NewPersistentStorage(storePath, persistDuration)
+	defer storage.Db.Close()
 
 	httphandlerConfig := httphandler.Config{
-		Db:              db,
-		PersistDuration: persistDuration,
+		StorageInstance: storage,
 	}
 
 	middlewareConfig := middleware.Config{
@@ -89,26 +99,6 @@ func main() {
 	}
 }
 
-func createDatabase() *badger.DB {
-	absStorePath, err := filepath.Abs(storePath)
-	if err != nil {
-		log.Fatalf("Error resolving store path: %s", err)
-	}
-
-	if _, err := os.Stat(absStorePath); os.IsNotExist(err) {
-		err = os.MkdirAll(absStorePath, 0755)
-		if err != nil {
-			log.Fatalf("Error creating store directory: %s", err)
-		}
-	}
-
-	db, err = badger.Open(badger.DefaultOptions(absStorePath))
-	if err != nil {
-		log.Fatal(err)
-	}
-	return db
-}
-
 func createRouter(hhc httphandler.Config, mc middleware.Config) *mux.Router {
 	// Template parsing
 	tmpl, err := template.ParseFS(staticFiles, "static/index.html")
@@ -125,11 +115,13 @@ func createRouter(hhc httphandler.Config, mc middleware.Config) *mux.Router {
 	r.HandleFunc("/kp", hhc.KeyPairHandler).Methods("GET")
 
 	// Legacy routes
+	r.HandleFunc("/{uploadKey}", hhc.UploadHandler).Methods("GET")
 	r.HandleFunc("/{uploadKey}/", hhc.UploadHandler).Methods("GET")
 	r.HandleFunc("/{downloadKey}/json", hhc.DownloadHandler).Methods("GET")
 	r.HandleFunc("/{downloadKey}/plain/{param}", hhc.PlainDownloadHandler).Methods("GET")
 
 	// New routes
+	r.HandleFunc("/u/{uploadKey}", hhc.UploadHandler).Methods("GET")
 	r.HandleFunc("/u/{uploadKey}/", hhc.UploadHandler).Methods("GET")
 	r.HandleFunc("/d/{downloadKey}/json", hhc.DownloadHandler).Methods("GET")
 	r.HandleFunc("/d/{downloadKey}/plain/{param:.*}", hhc.PlainDownloadHandler).Methods("GET")
@@ -144,9 +136,11 @@ func createRouter(hhc httphandler.Config, mc middleware.Config) *mux.Router {
 			return
 		}
 		data := PageData{
-			UploadKey:      key,
-			DownloadKey:    key_down,
-			DataRentention: persistDuration,
+			UploadKey:     key,
+			DownloadKey:   key_down,
+			DataRetention: persistDurationString,
+			Version:       Version,
+			BuildTime:     BuildTime,
 		}
 		tmpl.Execute(w, data)
 	})
@@ -164,7 +158,9 @@ func createRouter(hhc httphandler.Config, mc middleware.Config) *mux.Router {
 }
 
 type PageData struct {
-	UploadKey      string
-	DownloadKey    string
-	DataRentention string
+	UploadKey     string
+	DownloadKey   string
+	DataRetention string
+	Version       string
+	BuildTime     string
 }

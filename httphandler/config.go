@@ -5,12 +5,11 @@ import (
 	"html"
 	"net/http"
 
-	"github.com/dgraph-io/badger/v3"
+	"github.com/dhcgn/iot-ephemeral-value-store/storage"
 )
 
 type Config struct {
-	Db              *badger.DB
-	PersistDuration string
+	StorageInstance storage.Storage
 }
 
 func sanitizeInput(input string) string {
