@@ -19,49 +19,98 @@ func (c Config) UploadAndPatchHandler(w http.ResponseWriter, r *http.Request) {
 	uploadKey := vars["uploadKey"]
 	path := vars["param"]
 
-	err := ValidateUploadKey(uploadKey)
-	if err != nil {
+	handleUpload(w, r, c, uploadKey, path, true)
+}
+
+func (c Config) UploadHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	uploadKey := vars["uploadKey"]
+
+	handleUpload(w, r, c, uploadKey, "", false)
+}
+
+func handleUpload(w http.ResponseWriter, r *http.Request, c Config, uploadKey, path string, isPatch bool) {
+	// Validate upload key
+	if err := ValidateUploadKey(uploadKey); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Derive the download key from the upload key
+	// Derive download key
 	downloadKey, err := domain.DeriveDownloadKey(uploadKey)
 	if err != nil {
 		http.Error(w, "Error deriving download key", http.StatusInternalServerError)
 		return
 	}
 
-	// Parse the duration for setting TTL on data
-	duration, err := time.ParseDuration(c.PersistDuration)
+	// Parse duration
+	duration, err := parseDuration(c.PersistDuration)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Invalid duration format: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	// Collect all parameters into a map
-	params := r.URL.Query()
+	// Collect parameters
+	paramMap := collectParams(r.URL.Query())
+
+	// Add timestamp to params
+	addTimestamp(paramMap)
+
+	// Handle data storage
+	if err := handleDataStorage(c, downloadKey, paramMap, path, isPatch, duration); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Construct and return response
+	constructAndReturnResponse(w, r, downloadKey, paramMap)
+}
+
+func parseDuration(durationStr string) (time.Duration, error) {
+	return time.ParseDuration(durationStr)
+}
+
+func collectParams(params map[string][]string) map[string]string {
 	paramMap := make(map[string]string)
 	for key, values := range params {
 		if len(values) > 0 {
-			// Sanitize each parameter value
 			sanitizedValue := sanitizeInput(values[0])
 			paramMap[key] = sanitizedValue
 		}
 	}
+	return paramMap
+}
 
-	// Get the current timestamp
+func addTimestamp(paramMap map[string]string) {
 	timestamp := time.Now().UTC().Format(time.RFC3339)
-
-	// Add the timestamp to the map
 	paramMap["timestamp"] = timestamp
+}
 
-	// Retrieve existing JSON data from the database
+func handleDataStorage(c Config, downloadKey string, paramMap map[string]string, path string, isPatch bool, duration time.Duration) error {
+	var dataToStore map[string]interface{}
+
+	if isPatch {
+		existingData, err := retrieveExistingData(c, downloadKey)
+		if err != nil {
+			return err
+		}
+		mergeData(existingData, paramMap, strings.Split(path, "/"))
+		dataToStore = existingData
+	} else {
+		dataToStore = make(map[string]interface{})
+		for k, v := range paramMap {
+			dataToStore[k] = v
+		}
+	}
+
+	return storeData(c, downloadKey, dataToStore, duration)
+}
+
+func retrieveExistingData(c Config, downloadKey string) (map[string]interface{}, error) {
 	var existingData map[string]interface{}
-	err = c.Db.View(func(txn *badger.Txn) error {
+	err := c.Db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(downloadKey))
 		if err != nil {
-			// If the key does not exist, initialize an empty map
 			if err == badger.ErrKeyNotFound {
 				existingData = make(map[string]interface{})
 				return nil
@@ -74,41 +123,29 @@ func (c Config) UploadAndPatchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return json.Unmarshal(jsonData, &existingData)
 	})
+	return existingData, err
+}
+
+func storeData(c Config, downloadKey string, dataToStore map[string]interface{}, duration time.Duration) error {
+	updatedJSONData, err := json.Marshal(dataToStore)
 	if err != nil {
-		http.Error(w, "Failed to retrieve existing data from database", http.StatusInternalServerError)
-		return
+		return errors.New("error encoding data to JSON")
 	}
 
-	// Merge the new data into the existing JSON structure
-	mergeData(existingData, paramMap, strings.Split(path, "/"))
-
-	// Convert the updated data to a JSON string
-	updatedJSONData, err := json.Marshal(existingData)
-	if err != nil {
-		http.Error(w, "Error encoding updated data to JSON", http.StatusInternalServerError)
-		return
-	}
-
-	// Store the updated JSON data in the database using the download key
-	err = c.Db.Update(func(txn *badger.Txn) error {
+	return c.Db.Update(func(txn *badger.Txn) error {
 		e := badger.NewEntry([]byte(downloadKey), updatedJSONData).WithTTL(duration)
 		return txn.SetEntry(e)
 	})
-	if err != nil {
-		http.Error(w, "Failed to save updated data to database", http.StatusInternalServerError)
-		return
-	}
+}
 
-	// Construct URLs for each parameter for the plainDownloadHandler
+func constructAndReturnResponse(w http.ResponseWriter, r *http.Request, downloadKey string, params map[string]string) {
 	urls := make(map[string]string)
 	for key := range params {
-		urls[key] = fmt.Sprintf("http://%s/%s/plain/%s", r.Host, downloadKey, key)
+		urls[key] = fmt.Sprintf("http://%s/d/%s/plain/%s", r.Host, downloadKey, key)
 	}
 
-	// Construct the download URL
-	downloadURL := fmt.Sprintf("http://%s/%s/json", r.Host, downloadKey)
+	downloadURL := fmt.Sprintf("http://%s/d/%s/json", r.Host, downloadKey)
 
-	// Return the download URL in the response
 	jsonResponse(w, map[string]interface{}{
 		"message":        "Data uploaded successfully",
 		"download_url":   downloadURL,
@@ -116,82 +153,6 @@ func (c Config) UploadAndPatchHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (c Config) UploadHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	uploadKey := vars["uploadKey"]
-
-	err := ValidateUploadKey(uploadKey)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Derive the download key from the upload key
-	downloadKey, err := domain.DeriveDownloadKey(uploadKey)
-	if err != nil {
-		http.Error(w, "Error deriving download key", http.StatusInternalServerError)
-		return
-	}
-
-	// Parse the duration for setting TTL on data
-	duration, err := time.ParseDuration(c.PersistDuration)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Invalid duration format: %v", err), http.StatusBadRequest)
-		return
-	}
-
-	// Collect all parameters into a map
-	params := r.URL.Query()
-	paramMap := make(map[string]string)
-	for key, values := range params {
-		if len(values) > 0 {
-			// Sanitize each parameter value
-			sanitizedValue := sanitizeInput(values[0])
-			paramMap[key] = sanitizedValue
-		}
-	}
-
-	// Get the current timestamp
-	timestamp := time.Now().UTC().Format(time.RFC3339)
-
-	// Add the timestamp to the map
-	paramMap["timestamp"] = timestamp
-
-	// Convert the parameter map to a JSON string
-	jsonData, err := json.Marshal(paramMap)
-	if err != nil {
-		http.Error(w, "Error encoding parameters to JSON", http.StatusInternalServerError)
-		return
-	}
-
-	// Store the JSON data in the database using the download key
-	err = c.Db.Update(func(txn *badger.Txn) error {
-		e := badger.NewEntry([]byte(downloadKey), jsonData).WithTTL(duration)
-		return txn.SetEntry(e)
-	})
-	if err != nil {
-		http.Error(w, "Failed to save to database", http.StatusInternalServerError)
-		return
-	}
-
-	// Construct URLs for each parameter for the plainDownloadHandler
-	urls := make(map[string]string)
-	for key := range params {
-		urls[key] = fmt.Sprintf("http://%s/%s/plain/%s", r.Host, downloadKey, key)
-	}
-
-	// Construct the download URL
-	downloadURL := fmt.Sprintf("http://%s/%s/json", r.Host, downloadKey)
-
-	// Return the download URL in the response
-	jsonResponse(w, map[string]interface{}{
-		"message":        "Data uploaded successfully",
-		"download_url":   downloadURL,
-		"parameter_urls": urls,
-	})
-}
-
-// mergeData merges the new data into the existing JSON structure based on the provided path.
 func mergeData(existingData map[string]interface{}, newData map[string]string, path []string) {
 	if len(path) == 0 || (len(path) == 1 && path[0] == "") {
 		for k, v := range newData {
@@ -212,14 +173,13 @@ func mergeData(existingData map[string]interface{}, newData map[string]string, p
 	}
 }
 
-// ValidateUploadKey checks if the uploadKey is a valid 256 bit hex string
 func ValidateUploadKey(uploadKey string) error {
-	uploadKey = strings.ToLower(uploadKey) // make it case insensitive
+	uploadKey = strings.ToLower(uploadKey)
 	decoded, err := hex.DecodeString(uploadKey)
 	if err != nil {
 		return errors.New("uploadKey must be a 256 bit hex string")
 	}
-	if len(decoded) != 32 { // 256 bits = 32 bytes
+	if len(decoded) != 32 {
 		return errors.New("uploadKey must be a 256 bit hex string")
 	}
 	return nil

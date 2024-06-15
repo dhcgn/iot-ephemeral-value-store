@@ -184,15 +184,15 @@ func TestRoutesPatchDownload(t *testing.T) {
 		bodyContains       string
 		bodyNotContains    string
 	}{
-		{"GET patch level 0", "GET", "/patch/" + key_up + "/" + "?value=1_4324232", http.StatusOK, true, "Data uploaded successfully", ""},
-		{"GET patch level 2", "GET", "/patch/" + key_up + "/1/2" + "?value=2_8923423", http.StatusOK, true, "Data uploaded successfully", ""},
+		{"Upload patch level 0", "GET", "/patch/" + key_up + "/" + "?value=1_4324232", http.StatusOK, true, "Data uploaded successfully", ""},
+		{"Upload patch level 2", "GET", "/patch/" + key_up + "/1/2" + "?value=2_8923423", http.StatusOK, true, "Data uploaded successfully", ""},
 
-		{"GET d plain level 0", "GET", "/d/" + key_down + "/" + "plain/value", http.StatusOK, true, "1_4324232\n", ""},
-		{"GET d plain level 2", "GET", "/d/" + key_down + "/" + "plain/1/2/value", http.StatusOK, true, "2_8923423\n", ""},
+		{"Download plain level 0", "GET", "/d/" + key_down + "/" + "plain/value", http.StatusOK, true, "1_4324232\n", ""},
+		{"Download plain level 2", "GET", "/d/" + key_down + "/" + "plain/1/2/value", http.StatusOK, true, "2_8923423\n", ""},
 
-		{"GET d json level 0", "GET", "/d/" + key_down + "/" + "json", http.StatusOK, true, "\"value\":\"1_4324232\"", ""},
-		{"GET d json level 2", "GET", "/d/" + key_down + "/" + "json", http.StatusOK, true, "\"value\":\"2_8923423\"", ""},
-		{"GET d not contains empty key", "GET", "/d/" + key_down + "/" + "json", http.StatusOK, false, "", "\"\""},
+		{"Download json level 0", "GET", "/d/" + key_down + "/" + "json", http.StatusOK, true, "\"value\":\"1_4324232\"", ""},
+		{"Download json level 2", "GET", "/d/" + key_down + "/" + "json", http.StatusOK, true, "\"value\":\"2_8923423\"", ""},
+		{"Download not contains empty key", "GET", "/d/" + key_down + "/" + "json", http.StatusOK, false, "", "\"\""},
 	}
 
 	for _, tt := range tests {
