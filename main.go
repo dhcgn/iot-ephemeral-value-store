@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"text/template"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/dhcgn/iot-ephemeral-value-store/domain"
 	"github.com/dhcgn/iot-ephemeral-value-store/httphandler"
 	"github.com/dhcgn/iot-ephemeral-value-store/middleware"
+	"github.com/dhcgn/iot-ephemeral-value-store/storage"
 	"github.com/gorilla/mux"
 )
 
@@ -65,17 +65,16 @@ func initFlags() {
 func main() {
 	initFlags()
 
-	db := createDatabase()
-	defer db.Close()
-
 	persistDuration, err := time.ParseDuration(persistDurationString)
 	if err != nil {
 		log.Fatalf("Failed to parse duration: %v", err)
 	}
 
+	storage := storage.NewStorageInstance(storePath, persistDuration)
+	defer storage.Db.Close()
+
 	httphandlerConfig := httphandler.Config{
-		Db:              db,
-		PersistDuration: persistDuration,
+		StorageInstance: storage,
 	}
 
 	middlewareConfig := middleware.Config{
@@ -98,26 +97,6 @@ func main() {
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}
-}
-
-func createDatabase() *badger.DB {
-	absStorePath, err := filepath.Abs(storePath)
-	if err != nil {
-		log.Fatalf("Error resolving store path: %s", err)
-	}
-
-	if _, err := os.Stat(absStorePath); os.IsNotExist(err) {
-		err = os.MkdirAll(absStorePath, 0755)
-		if err != nil {
-			log.Fatalf("Error creating store directory: %s", err)
-		}
-	}
-
-	db, err = badger.Open(badger.DefaultOptions(absStorePath))
-	if err != nil {
-		log.Fatal(err)
-	}
-	return db
 }
 
 func createRouter(hhc httphandler.Config, mc middleware.Config) *mux.Router {

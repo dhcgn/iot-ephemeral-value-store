@@ -4,14 +4,12 @@ import (
 	"encoding/json"
 	"html"
 	"net/http"
-	"time"
 
-	"github.com/dgraph-io/badger/v3"
+	"github.com/dhcgn/iot-ephemeral-value-store/storage"
 )
 
 type Config struct {
-	Db              *badger.DB
-	PersistDuration time.Duration
+	StorageInstance storage.Storage
 }
 
 func sanitizeInput(input string) string {

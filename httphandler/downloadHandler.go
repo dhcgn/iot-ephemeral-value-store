@@ -14,7 +14,7 @@ func (c Config) PlainDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	downloadKey := vars["downloadKey"]
 	param := vars["param"]
 
-	jsonData, err := c.getJsonData(downloadKey)
+	jsonData, err := c.StorageInstance.GetJsonData(downloadKey)
 	if err != nil {
 		http.Error(w, "Invalid download key or database error", http.StatusNotFound)
 		return
@@ -54,7 +54,7 @@ func (c Config) DownloadHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	downloadKey := vars["downloadKey"]
 
-	jsonData, err := c.getJsonData(downloadKey)
+	jsonData, err := c.StorageInstance.GetJsonData(downloadKey)
 	if err != nil {
 		http.Error(w, "Invalid download key or database error", http.StatusNotFound)
 		return

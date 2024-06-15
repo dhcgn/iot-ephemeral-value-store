@@ -4,23 +4,18 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
-	"github.com/dgraph-io/badger/v3"
 	"github.com/dhcgn/iot-ephemeral-value-store/httphandler"
 	"github.com/dhcgn/iot-ephemeral-value-store/middleware"
+	"github.com/dhcgn/iot-ephemeral-value-store/storage"
 	"github.com/stretchr/testify/assert"
 )
 
 func createTestEnvireonment(t *testing.T) (httphandler.Config, middleware.Config) {
-	db := setupTestDB(t)
-	duration, err := time.ParseDuration(DefaultPersistDuration)
-	if err != nil {
-		t.Fatalf("Failed to parse duration: %v", err)
-	}
+	storageInMemory := storage.NewStorageInstanceInMemory()
+
 	var httphandlerConfig = httphandler.Config{
-		Db:              db,
-		PersistDuration: duration,
+		StorageInstance: storageInMemory,
 	}
 
 	var middlewareConfig = middleware.Config{
@@ -220,13 +215,4 @@ func TestRoutesPatchDownload(t *testing.T) {
 			}
 		})
 	}
-}
-
-func setupTestDB(t *testing.T) *badger.DB {
-	opts := badger.DefaultOptions("").WithInMemory(true)
-	db, err := badger.Open(opts)
-	if err != nil {
-		t.Fatalf("Failed to open Badger database: %v", err)
-	}
-	return db
 }
