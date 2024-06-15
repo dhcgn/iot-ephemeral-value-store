@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/dhcgn/iot-ephemeral-value-store/httphandler"
@@ -13,9 +14,13 @@ import (
 
 func createTestEnvireonment(t *testing.T) (httphandler.Config, middleware.Config) {
 	db := setupTestDB(t)
+	duration, err := time.ParseDuration(DefaultPersistDuration)
+	if err != nil {
+		t.Fatalf("Failed to parse duration: %v", err)
+	}
 	var httphandlerConfig = httphandler.Config{
 		Db:              db,
-		PersistDuration: DefaultPersistDuration,
+		PersistDuration: duration,
 	}
 
 	var middlewareConfig = middleware.Config{

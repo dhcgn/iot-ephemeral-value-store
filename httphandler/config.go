@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"html"
 	"net/http"
+	"time"
 
 	"github.com/dgraph-io/badger/v3"
 )
 
 type Config struct {
 	Db              *badger.DB
-	PersistDuration string
+	PersistDuration time.Duration
 }
 
 func sanitizeInput(input string) string {

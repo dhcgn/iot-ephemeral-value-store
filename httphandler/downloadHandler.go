@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/dgraph-io/badger/v3"
 	"github.com/gorilla/mux"
 )
 
@@ -15,17 +14,9 @@ func (c Config) PlainDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	downloadKey := vars["downloadKey"]
 	param := vars["param"]
 
-	var jsonData []byte
-	err := c.Db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(downloadKey))
-		if err != nil {
-			return err
-		}
-		jsonData, err = item.ValueCopy(nil)
-		return err
-	})
+	jsonData, err := c.getJsonData(downloadKey)
 	if err != nil {
-		http.Error(w, "Data not found", http.StatusNotFound)
+		http.Error(w, "Invalid download key or database error", http.StatusNotFound)
 		return
 	}
 
@@ -63,15 +54,7 @@ func (c Config) DownloadHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	downloadKey := vars["downloadKey"]
 
-	var jsonData []byte
-	err := c.Db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(downloadKey))
-		if err != nil {
-			return err
-		}
-		jsonData, err = item.ValueCopy(nil)
-		return err
-	})
+	jsonData, err := c.getJsonData(downloadKey)
 	if err != nil {
 		http.Error(w, "Invalid download key or database error", http.StatusNotFound)
 		return

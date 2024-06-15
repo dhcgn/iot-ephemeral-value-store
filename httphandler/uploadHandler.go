@@ -2,14 +2,12 @@ package httphandler
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/dgraph-io/badger/v3"
 	"github.com/dhcgn/iot-ephemeral-value-store/domain"
 	"github.com/gorilla/mux"
 )
@@ -19,17 +17,17 @@ func (c Config) UploadAndPatchHandler(w http.ResponseWriter, r *http.Request) {
 	uploadKey := vars["uploadKey"]
 	path := vars["param"]
 
-	handleUpload(w, r, c, uploadKey, path, true)
+	c.handleUpload(w, r, uploadKey, path, true)
 }
 
 func (c Config) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	uploadKey := vars["uploadKey"]
 
-	handleUpload(w, r, c, uploadKey, "", false)
+	c.handleUpload(w, r, uploadKey, "", false)
 }
 
-func handleUpload(w http.ResponseWriter, r *http.Request, c Config, uploadKey, path string, isPatch bool) {
+func (c Config) handleUpload(w http.ResponseWriter, r *http.Request, uploadKey, path string, isPatch bool) {
 	// Validate upload key
 	if err := ValidateUploadKey(uploadKey); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -43,13 +41,6 @@ func handleUpload(w http.ResponseWriter, r *http.Request, c Config, uploadKey, p
 		return
 	}
 
-	// Parse duration
-	duration, err := parseDuration(c.PersistDuration)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Invalid duration format: %v", err), http.StatusBadRequest)
-		return
-	}
-
 	// Collect parameters
 	paramMap := collectParams(r.URL.Query())
 
@@ -57,17 +48,13 @@ func handleUpload(w http.ResponseWriter, r *http.Request, c Config, uploadKey, p
 	addTimestamp(paramMap)
 
 	// Handle data storage
-	if err := handleDataStorage(c, downloadKey, paramMap, path, isPatch, duration); err != nil {
+	if err := c.handleDataStorage(downloadKey, paramMap, path, isPatch); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Construct and return response
 	constructAndReturnResponse(w, r, downloadKey, paramMap)
-}
-
-func parseDuration(durationStr string) (time.Duration, error) {
-	return time.ParseDuration(durationStr)
 }
 
 func collectParams(params map[string][]string) map[string]string {
@@ -86,11 +73,11 @@ func addTimestamp(paramMap map[string]string) {
 	paramMap["timestamp"] = timestamp
 }
 
-func handleDataStorage(c Config, downloadKey string, paramMap map[string]string, path string, isPatch bool, duration time.Duration) error {
+func (c Config) handleDataStorage(downloadKey string, paramMap map[string]string, path string, isPatch bool) error {
 	var dataToStore map[string]interface{}
 
 	if isPatch {
-		existingData, err := retrieveExistingData(c, downloadKey)
+		existingData, err := c.retrieveExistingData(downloadKey)
 		if err != nil {
 			return err
 		}
@@ -103,39 +90,7 @@ func handleDataStorage(c Config, downloadKey string, paramMap map[string]string,
 		}
 	}
 
-	return storeData(c, downloadKey, dataToStore, duration)
-}
-
-func retrieveExistingData(c Config, downloadKey string) (map[string]interface{}, error) {
-	var existingData map[string]interface{}
-	err := c.Db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(downloadKey))
-		if err != nil {
-			if err == badger.ErrKeyNotFound {
-				existingData = make(map[string]interface{})
-				return nil
-			}
-			return err
-		}
-		jsonData, err := item.ValueCopy(nil)
-		if err != nil {
-			return err
-		}
-		return json.Unmarshal(jsonData, &existingData)
-	})
-	return existingData, err
-}
-
-func storeData(c Config, downloadKey string, dataToStore map[string]interface{}, duration time.Duration) error {
-	updatedJSONData, err := json.Marshal(dataToStore)
-	if err != nil {
-		return errors.New("error encoding data to JSON")
-	}
-
-	return c.Db.Update(func(txn *badger.Txn) error {
-		e := badger.NewEntry([]byte(downloadKey), updatedJSONData).WithTTL(duration)
-		return txn.SetEntry(e)
-	})
+	return c.storeData(downloadKey, dataToStore)
 }
 
 func constructAndReturnResponse(w http.ResponseWriter, r *http.Request, downloadKey string, params map[string]string) {

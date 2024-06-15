@@ -41,10 +41,10 @@ const (
 var staticFiles embed.FS
 
 var (
-	persistDuration string
-	storePath       string
-	port            int
-	db              *badger.DB
+	persistDurationString string
+	storePath             string
+	port                  int
+	db                    *badger.DB
 )
 
 // Set in build time
@@ -55,7 +55,7 @@ var (
 
 func initFlags() {
 	myFlags := flag.NewFlagSet("iot-ephemeral-value-store", flag.ExitOnError)
-	myFlags.StringVar(&persistDuration, "persist-values-for", DefaultPersistDuration, "Duration for which the values are stored before they are deleted.")
+	myFlags.StringVar(&persistDurationString, "persist-values-for", DefaultPersistDuration, "Duration for which the values are stored before they are deleted.")
 	myFlags.StringVar(&storePath, "store", DefaultStorePath, "Path to the directory where the values will be stored.")
 	myFlags.IntVar(&port, "port", DefaultPort, "The port number on which the server will listen.")
 
@@ -67,6 +67,11 @@ func main() {
 
 	db := createDatabase()
 	defer db.Close()
+
+	persistDuration, err := time.ParseDuration(persistDurationString)
+	if err != nil {
+		log.Fatalf("Failed to parse duration: %v", err)
+	}
 
 	httphandlerConfig := httphandler.Config{
 		Db:              db,
@@ -154,7 +159,7 @@ func createRouter(hhc httphandler.Config, mc middleware.Config) *mux.Router {
 		data := PageData{
 			UploadKey:     key,
 			DownloadKey:   key_down,
-			DataRetention: persistDuration,
+			DataRetention: persistDurationString,
 			Version:       Version,
 			BuildTime:     BuildTime,
 		}
