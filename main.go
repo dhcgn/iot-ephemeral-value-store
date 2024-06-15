@@ -47,6 +47,12 @@ var (
 	db              *badger.DB
 )
 
+// Set in build time
+var (
+	Version   string = "dev"
+	BuildTime string = "unknown"
+)
+
 func initFlags() {
 	myFlags := flag.NewFlagSet("iot-ephemeral-value-store", flag.ExitOnError)
 	myFlags.StringVar(&persistDuration, "persist-values-for", DefaultPersistDuration, "Duration for which the values are stored before they are deleted.")
@@ -144,9 +150,11 @@ func createRouter(hhc httphandler.Config, mc middleware.Config) *mux.Router {
 			return
 		}
 		data := PageData{
-			UploadKey:      key,
-			DownloadKey:    key_down,
-			DataRentention: persistDuration,
+			UploadKey:     key,
+			DownloadKey:   key_down,
+			DataRetention: persistDuration,
+			Version:       Version,
+			BuildTime:     BuildTime,
 		}
 		tmpl.Execute(w, data)
 	})
@@ -164,7 +172,9 @@ func createRouter(hhc httphandler.Config, mc middleware.Config) *mux.Router {
 }
 
 type PageData struct {
-	UploadKey      string
-	DownloadKey    string
-	DataRentention string
+	UploadKey     string
+	DownloadKey   string
+	DataRetention string
+	Version       string
+	BuildTime     string
 }
