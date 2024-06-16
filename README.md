@@ -13,6 +13,70 @@ This project provides a simple HTTP server that offers ephemeral storage for IoT
 - **Patch Feature**: Combine different uploads into a single JSON structure, which can be downloaded with one call.
 - **Privacy**: Separate keys for upload and download to ensure secure and private data handling.
 
+## Why?
+
+- Upload sensor data from IoT devices without the need for complex authentication. 
+- IoT must only be able to make a simple HTTP GET request.
+- Retrieve data using a simple key-based system with HTTP GET requests.
+- Data can be reviewed as JSON or plain text.
+- Data is stored for a configurable duration before being deleted.
+- The server can be run on a local network or in the cloud.
+
+## Diagrams
+
+### Simple
+
+```mermaid
+sequenceDiagram
+    participant IoT Device 1
+    participant IoT Device 2
+    participant HTTP Server
+    IoT Device 1->>HTTP Server: GET /kp (Create Key Pair)
+    HTTP Server-->>IoT Device 1: { "upload-key": "key1", "download-key": "dkey1" }
+    IoT Device 1->>HTTP Server: GET /u/key1?tempC=12 (Upload Data)
+    HTTP Server-->>IoT Device 1: { "message": "Data uploaded successfully" }
+    IoT Device 2->>HTTP Server: GET /kp (Create Key Pair)
+    HTTP Server-->>IoT Device 2: { "upload-key": "key2", "download-key": "dkey2" }
+    IoT Device 2->>HTTP Server: GET /u/key2?humidity=45 (Upload Data)
+    HTTP Server-->>IoT Device 2: { "message": "Data uploaded successfully" }
+```    
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Web Browser
+    participant HTTP Server
+    Web Browser->>HTTP Server: GET /d/dkey1/json (Retrieve Data)
+    HTTP Server-->>Web Browser: { "tempC": "12", "timestamp": "2024-06-15T10:37:28Z" }
+    Web Browser->>User: Display Data    
+```
+
+### Patch
+
+```mermaid
+sequenceDiagram
+    participant IoT Device
+    participant HTTP Server
+
+    IoT Device->>HTTP Server: GET /kp (Create Key Pair)
+    HTTP Server-->>IoT Device: { "upload-key": "key1", "download-key": "dkey1" }
+    
+    Note right of IoT Device: Initial Patch to Root
+    IoT Device->>HTTP Server: GET /patch/key1/?temp=23&hum=43
+    HTTP Server-->>IoT Device: { "message": "Data uploaded successfully", "download_url": "http://127.0.0.1:8080/d/dkey1/json" }
+
+    Note right of IoT Device: Nested Patch
+    IoT Device->>HTTP Server: GET /patch/key1/house_1/?temp=30&hum=50
+    HTTP Server-->>IoT Device: { "message": "Data uploaded successfully", "download_url": "http://127.0.0.1:8080/d/dkey1/json" }
+
+    Note right of IoT Device: Deeply Nested Patch
+    IoT Device->>HTTP Server: GET /patch/key1/house_2/basement/kitchen/?temp=31&hum=49
+    HTTP Server-->>IoT Device: { "message": "Data uploaded successfully", "download_url": "http://127.0.0.1:8080/d/dkey1/json" }
+
+    Note left of HTTP Server: Data Structure Updated
+    HTTP Server-->>HTTP Server: Data structure updated with new values
+```
+
 ## HTTP Calls
 
 ### Simple Curl Examples
@@ -230,4 +294,4 @@ sudo -i
 bash <(curl -s https://raw.githubusercontent.com/dhcgn/iot-ephemeral-value-store/main/install/download-and-install.sh)
 ```
 
-![Installation Screesnhot](readme.md-assets\WindowsTerminal_OcSA89D3Ab.png)
+![Installation Screesnhot](readme.md-assets/WindowsTerminal_OcSA89D3Ab.png)
