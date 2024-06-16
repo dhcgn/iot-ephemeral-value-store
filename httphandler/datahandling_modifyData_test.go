@@ -3,6 +3,7 @@ package httphandler
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/dgraph-io/badger/v3"
@@ -10,7 +11,8 @@ import (
 )
 
 type MockStorage struct {
-	data map[string]map[string]interface{}
+	data        map[string]map[string]interface{}
+	retrieveErr error
 }
 
 func (m *MockStorage) GetJSON(downloadKey string) ([]byte, error) {
@@ -31,6 +33,9 @@ func (m *MockStorage) Store(downloadKey string, dataToStore map[string]interface
 }
 
 func (m *MockStorage) Retrieve(downloadKey string) (map[string]interface{}, error) {
+	if m.retrieveErr != nil {
+		return nil, m.retrieveErr
+	}
 	if data, exists := m.data[downloadKey]; exists {
 		return data, nil
 	}
@@ -103,4 +108,16 @@ func TestModifyData(t *testing.T) {
 		"timestamp": modifiedData["timestamp"],
 	}
 	assert.Equal(t, expectedData, modifiedData)
+
+	// Test case: Error during retrieval
+	mockStorage.retrieveErr = errors.New("retrieval error")
+	paramMap = map[string]string{
+		"field3": "value3",
+	}
+	path = ""
+	isPatch = true
+
+	modifiedData, err = config.modifyData(downloadKey, paramMap, path, isPatch)
+	assert.Error(t, err)
+	assert.Nil(t, modifiedData)
 }
