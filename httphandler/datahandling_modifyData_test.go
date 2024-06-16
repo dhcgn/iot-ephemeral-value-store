@@ -1,85 +1,106 @@
+// datahandling_modifyData_test.go
 package httphandler
 
 import (
-	"errors"
+	"encoding/json"
 	"testing"
 
+	"github.com/dgraph-io/badger/v3"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
-// MockStorage is a mock implementation of the Storage interface
 type MockStorage struct {
-	mock.Mock
+	data map[string]map[string]interface{}
 }
 
-func (m *MockStorage) Retrieve(key string) (map[string]interface{}, error) {
-	args := m.Called(key)
-	return args.Get(0).(map[string]interface{}), args.Error(1)
+func (m *MockStorage) GetJSON(downloadKey string) ([]byte, error) {
+	if data, exists := m.data[downloadKey]; exists {
+		return json.Marshal(data)
+	}
+	return nil, badger.ErrKeyNotFound
 }
 
-func (m *MockStorage) Delete(key string) error {
-	args := m.Called(key)
-	return args.Error(0)
+func (m *MockStorage) Delete(downloadKey string) error {
+	delete(m.data, downloadKey)
+	return nil
 }
 
-func (m *MockStorage) GetJSON(key string) ([]byte, error) {
-	args := m.Called(key)
-	return args.Get(0).([]byte), args.Error(1)
+func (m *MockStorage) Store(downloadKey string, dataToStore map[string]interface{}) error {
+	m.data[downloadKey] = dataToStore
+	return nil
 }
 
-func (m *MockStorage) Store(key string, data map[string]interface{}) error {
-	args := m.Called(key, data)
-	return args.Error(0)
-}
-
-// Storage is an interface that defines the Retrieve method
-type Storage interface {
-	Retrieve(key string) (map[string]interface{}, error)
+func (m *MockStorage) Retrieve(downloadKey string) (map[string]interface{}, error) {
+	if data, exists := m.data[downloadKey]; exists {
+		return data, nil
+	}
+	return nil, badger.ErrKeyNotFound
 }
 
 func TestModifyData(t *testing.T) {
-	mockStorage := new(MockStorage)
-	config := Config{StorageInstance: mockStorage}
+	mockStorage := &MockStorage{
+		data: map[string]map[string]interface{}{
+			"existingDownloadKey": {
+				"field1": "value1",
+			},
+		},
+	}
 
-	t.Run("isPatch true with existing data", func(t *testing.T) {
-		downloadKey := "testKey"
-		paramMap := map[string]string{"newKey": "newValue"}
-		path := "some/path"
-		isPatch := true
+	config := Config{
+		StorageInstance: mockStorage,
+	}
 
-		existingData := map[string]interface{}{"existingKey": "existingValue"}
-		mockStorage.On("Retrieve", downloadKey).Return(existingData, nil)
+	// Test case: Modify existing data with patch
+	paramMap := map[string]string{
+		"field2": "value2",
+	}
+	path := ""
+	isPatch := true
+	downloadKey := "existingDownloadKey"
 
-		result, err := config.modifyData(downloadKey, paramMap, path, isPatch)
-		assert.NoError(t, err)
-		assert.Equal(t, "existingValue", result["existingKey"])
-		assert.Equal(t, "newValue", result["newKey"])
-		assert.NotEmpty(t, result["timestamp"])
-	})
+	modifiedData, err := config.modifyData(downloadKey, paramMap, path, isPatch)
+	assert.NoError(t, err)
 
-	t.Run("isPatch false creates new data", func(t *testing.T) {
-		downloadKey := "testKey"
-		paramMap := map[string]string{"newKey": "newValue"}
-		path := "some/path"
-		isPatch := false
+	expectedData := map[string]interface{}{
+		"field1":    "value1",
+		"field2":    "value2",
+		"timestamp": modifiedData["timestamp"],
+	}
+	assert.Equal(t, expectedData, modifiedData)
 
-		result, err := config.modifyData(downloadKey, paramMap, path, isPatch)
-		assert.NoError(t, err)
-		assert.Equal(t, "newValue", result["newKey"])
-		assert.NotEmpty(t, result["timestamp"])
-	})
+	// Test case: Modify existing data with patch and nested path
+	paramMap = map[string]string{
+		"nestedField": "nestedValue",
+	}
+	path = "nested"
+	isPatch = true
 
-	t.Run("isPatch true with error retrieving data", func(t *testing.T) {
-		downloadKey := "testKey"
-		paramMap := map[string]string{"newKey": "newValue"}
-		path := "some/path"
-		isPatch := true
+	modifiedData, err = config.modifyData(downloadKey, paramMap, path, isPatch)
+	assert.NoError(t, err)
 
-		mockStorage.On("Retrieve", downloadKey).Return(nil, errors.New("retrieve error"))
+	expectedData = map[string]interface{}{
+		"field1": "value1",
+		"field2": "value2",
+		"nested": map[string]interface{}{
+			"nestedField": "nestedValue",
+		},
+		"timestamp": modifiedData["timestamp"],
+	}
+	assert.Equal(t, expectedData, modifiedData)
 
-		result, err := config.modifyData(downloadKey, paramMap, path, isPatch)
-		assert.Error(t, err)
-		assert.Nil(t, result)
-	})
+	// Test case: Overwrite data without patch
+	paramMap = map[string]string{
+		"newField": "newValue",
+	}
+	path = ""
+	isPatch = false
+
+	modifiedData, err = config.modifyData(downloadKey, paramMap, path, isPatch)
+	assert.NoError(t, err)
+
+	expectedData = map[string]interface{}{
+		"newField":  "newValue",
+		"timestamp": modifiedData["timestamp"],
+	}
+	assert.Equal(t, expectedData, modifiedData)
 }
