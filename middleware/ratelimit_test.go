@@ -9,52 +9,63 @@ import (
 )
 
 func TestRateLimit(t *testing.T) {
-	mockStats := stats.NewStats()
-	config := Config{
-		RateLimitPerSecond: 2,
-		RateLimitBurst:     1,
-		StatsInstance:      mockStats,
+	tests := []struct {
+		name            string
+		remoteAddr      string
+		requests        int
+		expectRateLimit bool
+	}{
+		{
+			name:            "Non-local IP should be rate limited",
+			remoteAddr:      "192.168.1.1:1234",
+			requests:        10,
+			expectRateLimit: true,
+		},
+		{
+			name:            "Local IP should not be rate limited",
+			remoteAddr:      "127.0.0.1:1234",
+			requests:        10,
+			expectRateLimit: false,
+		},
+		{
+			name:            "Empty remote addr should not be rate limited",
+			remoteAddr:      "",
+			requests:        10,
+			expectRateLimit: false,
+		},
 	}
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockStats := stats.NewStats()
+			config := Config{
+				RateLimitPerSecond: 2,
+				RateLimitBurst:     1,
+				StatsInstance:      mockStats,
+			}
 
-	middleware := config.RateLimit(handler)
+			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			})
 
-	// Test non-local IP (should be rate limited)
-	req := httptest.NewRequest("GET", "/", nil)
-	req.RemoteAddr = "192.168.1.1:1234"
+			middleware := config.RateLimit(handler)
 
-	var responses []int
-	for i := 0; i < 10; i++ {
-		rr := httptest.NewRecorder()
-		middleware.ServeHTTP(rr, req)
-		responses = append(responses, rr.Code)
-	}
+			req := httptest.NewRequest("GET", "/", nil)
+			req.RemoteAddr = tt.remoteAddr
 
-	// Check if any rate limiting occurred
-	rateLimited := false
-	for _, status := range responses {
-		if status == http.StatusTooManyRequests {
-			rateLimited = true
-			break
-		}
-	}
+			rateLimited := false
+			for i := 0; i < tt.requests; i++ {
+				rr := httptest.NewRecorder()
+				middleware.ServeHTTP(rr, req)
+				if rr.Code == http.StatusTooManyRequests {
+					rateLimited = true
+					break
+				}
+			}
 
-	if !rateLimited {
-		t.Errorf("Rate limiting did not occur for non-local IP")
-	}
-
-	// Test local IP (should not be rate limited)
-	req = httptest.NewRequest("GET", "/", nil)
-	req.RemoteAddr = "127.0.0.1:1234"
-
-	for i := 0; i < 10; i++ {
-		rr := httptest.NewRecorder()
-		middleware.ServeHTTP(rr, req)
-		if rr.Code != http.StatusOK {
-			t.Errorf("Local IP was rate limited: got status %d", rr.Code)
-		}
+			if rateLimited != tt.expectRateLimit {
+				t.Errorf("Rate limiting behavior incorrect. Expected rate limiting: %v, got: %v", tt.expectRateLimit, rateLimited)
+			}
+		})
 	}
 }
