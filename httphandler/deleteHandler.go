@@ -18,11 +18,12 @@ func (c Config) DeleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO return NOT FOUND if key does not exist?
 	if err := c.StorageInstance.Delete(downloadKey); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	w.Write([]byte("OK\n"))
 }
