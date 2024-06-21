@@ -48,8 +48,8 @@ func NewStats() *Stats {
 }
 
 func (s *Stats) GetCurrentStats() StatsData {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	s.updateLast24hStats()
 	return s.data
