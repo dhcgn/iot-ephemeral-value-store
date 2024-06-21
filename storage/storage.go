@@ -91,6 +91,7 @@ func (c StorageInstance) Retrieve(downloadKey string) (map[string]interface{}, e
 		item, err := txn.Get([]byte(downloadKey))
 		if err != nil {
 			if err == badger.ErrKeyNotFound {
+				// TODO Why?
 				existingData = make(map[string]interface{})
 				return nil
 			}
