@@ -11,10 +11,10 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/dgraph-io/badger/v3"
 	"github.com/dhcgn/iot-ephemeral-value-store/domain"
 	"github.com/dhcgn/iot-ephemeral-value-store/httphandler"
 	"github.com/dhcgn/iot-ephemeral-value-store/middleware"
+	"github.com/dhcgn/iot-ephemeral-value-store/stats"
 	"github.com/dhcgn/iot-ephemeral-value-store/storage"
 	"github.com/gorilla/mux"
 )
@@ -22,8 +22,8 @@ import (
 const (
 	// Server configuration
 	MaxRequestSize     = 1024 * 10 // 10 KB for request size limit
-	RateLimitPerSecond = 10        // Requests per second
-	RateLimitBurst     = 5         // Burst capability
+	RateLimitPerSecond = 100       // Requests per second
+	RateLimitBurst     = 10        // Burst capability
 
 	// Database and server paths
 	DefaultStorePath       = "./data"
@@ -44,7 +44,6 @@ var (
 	persistDurationString string
 	storePath             string
 	port                  int
-	db                    *badger.DB
 )
 
 // Set in build time
@@ -70,20 +69,24 @@ func main() {
 		log.Fatalf("Failed to parse duration: %v", err)
 	}
 
+	stats := stats.NewStats()
+
 	storage := storage.NewPersistentStorage(storePath, persistDuration)
 	defer storage.Db.Close()
 
 	httphandlerConfig := httphandler.Config{
 		StorageInstance: storage,
+		StatsInstance:   stats,
 	}
 
 	middlewareConfig := middleware.Config{
 		RateLimitPerSecond: RateLimitPerSecond,
 		RateLimitBurst:     RateLimitBurst,
 		MaxRequestSize:     MaxRequestSize,
+		StatsInstance:      stats,
 	}
 
-	r := createRouter(httphandlerConfig, middlewareConfig)
+	r := createRouter(httphandlerConfig, middlewareConfig, stats)
 
 	serverAddress := fmt.Sprintf("127.0.0.1:%d", port)
 	srv := &http.Server{
@@ -99,7 +102,7 @@ func main() {
 	}
 }
 
-func createRouter(hhc httphandler.Config, mc middleware.Config) *mux.Router {
+func createRouter(hhc httphandler.Config, mc middleware.Config, stats *stats.Stats) *mux.Router {
 	// Template parsing
 	tmpl, err := template.ParseFS(staticFiles, "static/index.html")
 	if err != nil {
@@ -134,22 +137,7 @@ func createRouter(hhc httphandler.Config, mc middleware.Config) *mux.Router {
 	r.HandleFunc("/delete/{uploadKey}", hhc.DeleteHandler).Methods("GET")
 	r.HandleFunc("/delete/{uploadKey}/", hhc.DeleteHandler).Methods("GET")
 
-	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		key := domain.GenerateRandomKey()
-		key_down, err := domain.DeriveDownloadKey(key)
-		if err != nil {
-			http.Error(w, "Error deriving download key", http.StatusInternalServerError)
-			return
-		}
-		data := PageData{
-			UploadKey:     key,
-			DownloadKey:   key_down,
-			DataRetention: persistDurationString,
-			Version:       Version,
-			BuildTime:     BuildTime,
-		}
-		tmpl.Execute(w, data)
-	})
+	r.HandleFunc("/", templateHandler(tmpl, stats))
 
 	// Not Found handler
 	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -163,10 +151,37 @@ func createRouter(hhc httphandler.Config, mc middleware.Config) *mux.Router {
 	return r
 }
 
+func templateHandler(tmpl *template.Template, stats *stats.Stats) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		key := domain.GenerateRandomKey()
+		key_down, err := domain.DeriveDownloadKey(key)
+		if err != nil {
+			http.Error(w, "Error deriving download key", http.StatusInternalServerError)
+			return
+		}
+		data := PageData{
+			UploadKey:     key,
+			DownloadKey:   key_down,
+			DataRetention: persistDurationString,
+			Version:       Version,
+			BuildTime:     BuildTime,
+
+			Uptime: stats.GetUptime(),
+
+			StateData: stats.GetCurrentStats(),
+		}
+		tmpl.Execute(w, data)
+	}
+}
+
 type PageData struct {
 	UploadKey     string
 	DownloadKey   string
 	DataRetention string
 	Version       string
 	BuildTime     string
+
+	Uptime time.Duration
+
+	StateData stats.StatsData
 }

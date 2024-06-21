@@ -102,6 +102,34 @@
             <li><strong>Data retention:</strong> {{.DataRetention}}</li>
         </ul>
 
+        <h2>Server Stats</h2>
+        <ul>
+            <li><strong>Uptime:</strong> {{.Uptime}}</li>
+            <li><strong>Download/Upload Count since Start:</strong> {{.StateData.DownloadCount}}/{{.StateData.UploadCount}}</li>
+            <li><strong>Download/Upload Count last 24h:</strong> {{.StateData.Last24hDownloadCount}}/{{.StateData.Last24hUploadCount}}</li>
+            <li><strong>HTTP Error Count since Start:</strong> {{.StateData.HTTPErrorCount}}</li>
+            <li><strong>HTTP Error Count last 24h:</strong> {{.StateData.Last24hHTTPErrorCount}}</li>
+            <li><strong>Rate Limit Hit Count:</strong> {{.StateData.RateLimitHitCount}}</li>
+        </ul>
+        
+        <h2>Rate Limit Stats</h2>
+        {{if len .StateData.RateLimitedIPs}}
+            <table>
+                <tr>
+                    <th>IP</th>
+                    <th>Request Count</th>
+                </tr>
+                {{range .StateData.RateLimitedIPs}}
+                <tr>
+                    <td>{{.IP}}</td>
+                    <td>{{.RequestCount}}</td>
+                </tr>
+                {{end}}
+            </table>
+        {{else}}
+            <p>No records</p>
+        {{end}}
+
         <h2>API Usage</h2>
         <ul>
             <li><strong>Create Key Pair:</strong> <code>GET /kp</code></li>

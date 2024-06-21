@@ -5,11 +5,13 @@ import (
 	"html"
 	"net/http"
 
+	"github.com/dhcgn/iot-ephemeral-value-store/stats"
 	"github.com/dhcgn/iot-ephemeral-value-store/storage"
 )
 
 type Config struct {
 	StorageInstance storage.Storage
+	StatsInstance   *stats.Stats
 }
 
 func sanitizeInput(input string) string {

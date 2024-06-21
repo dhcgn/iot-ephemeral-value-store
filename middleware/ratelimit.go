@@ -20,18 +20,21 @@ func (c Config) RateLimit(next http.Handler) http.Handler {
 
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
+			c.StatsInstance.IncrementHTTPErrors()
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 
 		// Exclude local IP addresses from rate limiting
-		if ip == "127.0.0.1" || ip == "::1" {
-			next.ServeHTTP(w, r)
-			return
-		}
+		// if ip == "127.0.0.1" || ip == "::1" {
+		// 	next.ServeHTTP(w, r)
+		// 	return
+		// }
 
 		limiter := c.getLimiter(ip)
 		if !limiter.Allow() {
+			c.StatsInstance.IncrementHTTPErrors()
+			c.StatsInstance.RecordRateLimitHit(ip)
 			http.Error(w, "Too Many Requests", http.StatusTooManyRequests)
 			return
 		}

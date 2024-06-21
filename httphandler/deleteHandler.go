@@ -13,6 +13,7 @@ func (c Config) DeleteHandler(w http.ResponseWriter, r *http.Request) {
 
 	downloadKey, err := domain.DeriveDownloadKey(uploadKey)
 	if err != nil {
+		c.StatsInstance.IncrementHTTPErrors()
 		http.Error(w, "Error deriving download key", http.StatusInternalServerError)
 		return
 	}
