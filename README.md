@@ -22,6 +22,35 @@ This project provides a simple HTTP server that offers ephemeral storage for IoT
 - Data is stored for a configurable duration before being deleted.
 - The server can be run on a local network or in the cloud.
 
+## Self-Hosted Info Website
+
+The iot-ephemeral-value-store server includes a self-hosted info website that provides valuable information about the server's status, usage, and API. This website is automatically available when you run the server and can be accessed at the root URL (e.g., `http://127.0.0.1:8088/`).
+
+### Features of the Info Website
+
+1. **Getting Started Guide**: Provides example URLs for uploading, downloading, and deleting data, customized with a generated key pair for immediate use.
+
+2. **Server Settings**: Displays important server configuration information, including:
+   - Software Version
+   - Software Build Time
+   - Data Retention Period
+
+3. **Server Stats**: Shows real-time statistics about server usage:
+   - Server Uptime
+   - Download/Upload Counts (since start and last 24 hours)
+   - HTTP Error Counts
+   - Rate Limit Hit Count
+
+4. **Rate Limit Stats**: Provides information about rate limiting, if applicable.
+
+5. **API Usage Guide**: Offers a quick reference for using the server's API, including:
+   - Creating Key Pairs
+   - Uploading Data
+   - Downloading Data (JSON and Plain Text)
+   - Advanced Patch Usage
+
+This self-hosted info website serves as a dashboard and quick-start guide, making it easier for users to understand and interact with the iot-ephemeral-value-store server.
+
 ## Diagrams
 
 ### Simple
