@@ -12,9 +12,13 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# 1. Download latest release asset 'iot-ephemeral-value-store-server.tar.gz' from GitHub
+# 1. Download latest release asset 'iot-ephemeral-value-store-server.tar.gz' from GitHub and print the version number
 echo "Fetching latest release information..."
 LATEST_RELEASE_URL=$(curl -s "https://api.github.com/repos/$GITHUB_REPO/releases/latest" | grep "browser_download_url.*$ASSET_NAME" | cut -d '"' -f 4)
+
+# print lastest release version number
+LATEST_RELEASE_VERSION=$(curl -s "https://api.github.com/repos/$GITHUB_REPO/releases/latest" | grep "tag_name" | cut -d '"' -f 4)
+echo "Latest release version: $LATEST_RELEASE_VERSION"
 
 if [ -z "$LATEST_RELEASE_URL" ]; then
     echo "Error: Unable to find the latest release asset."
