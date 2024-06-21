@@ -50,8 +50,6 @@ func NewStats() *Stats {
 func (s *Stats) GetCurrentStats() StatsData {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-
-	s.updateLast24hStats()
 	return s.data
 }
 
@@ -63,6 +61,7 @@ func (s *Stats) IncrementDownloads() {
 	s.addToLast24h(func(sd *StatsData) {
 		sd.DownloadCount++
 	})
+	s.updateLast24hStats()
 }
 
 func (s *Stats) IncrementUploads() {
@@ -73,6 +72,7 @@ func (s *Stats) IncrementUploads() {
 	s.addToLast24h(func(sd *StatsData) {
 		sd.UploadCount++
 	})
+	s.updateLast24hStats()
 }
 
 func (s *Stats) IncrementHTTPErrors() {
@@ -83,6 +83,7 @@ func (s *Stats) IncrementHTTPErrors() {
 	s.addToLast24h(func(sd *StatsData) {
 		sd.HTTPErrorCount++
 	})
+	s.updateLast24hStats()
 }
 
 func (s *Stats) RecordRateLimitHit(ip string) {
