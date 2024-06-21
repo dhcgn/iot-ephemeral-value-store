@@ -44,6 +44,7 @@ func NewStats() *Stats {
 		data: StatsData{
 			StartTime: time.Now(),
 		},
+		mu: sync.RWMutex{},
 	}
 }
 
@@ -133,5 +134,11 @@ func (s *Stats) updateLast24hStats() {
 }
 
 func (s *Stats) GetUptime() time.Duration {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s == nil || s.data.StartTime.IsZero() {
+		return 0
+	}
 	return time.Since(s.data.StartTime)
 }

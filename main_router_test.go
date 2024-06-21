@@ -7,21 +7,24 @@ import (
 
 	"github.com/dhcgn/iot-ephemeral-value-store/httphandler"
 	"github.com/dhcgn/iot-ephemeral-value-store/middleware"
+	"github.com/dhcgn/iot-ephemeral-value-store/stats"
 	"github.com/dhcgn/iot-ephemeral-value-store/storage"
 	"github.com/stretchr/testify/assert"
 )
 
-func createTestEnvireonment(t *testing.T) (httphandler.Config, middleware.Config) {
+func createTestEnvireonment(t *testing.T, stats *stats.Stats) (httphandler.Config, middleware.Config) {
 	storageInMemory := storage.NewInMemoryStorage()
 
 	var httphandlerConfig = httphandler.Config{
 		StorageInstance: storageInMemory,
+		StatsInstance:   stats,
 	}
 
 	var middlewareConfig = middleware.Config{
 		RateLimitPerSecond: RateLimitPerSecond,
 		RateLimitBurst:     RateLimitBurst,
 		MaxRequestSize:     MaxRequestSize,
+		StatsInstance:      stats,
 	}
 
 	return httphandlerConfig, middlewareConfig
@@ -31,9 +34,9 @@ var key_up = "8e88f1b62b946dd3fccfd8eaf54c9a2e5e27747c3662f2e20645073e4626d7c5"
 var key_down = "fcbbda7c04eba41d060b70d1bf7fde8c4a148a087729017d22fc54037c9eb11b"
 
 func TestCreateRouter(t *testing.T) {
-	httphandlerConfig, middlewareConfig := createTestEnvireonment(t)
-
-	router := createRouter(httphandlerConfig, middlewareConfig, nil)
+	stats := stats.NewStats()
+	httphandlerConfig, middlewareConfig := createTestEnvireonment(t, stats)
+	router := createRouter(httphandlerConfig, middlewareConfig, stats)
 
 	tests := []struct {
 		name               string
@@ -62,9 +65,9 @@ func TestCreateRouter(t *testing.T) {
 }
 
 func TestLegacyRoutes(t *testing.T) {
-	httphandlerConfig, middlewareConfig := createTestEnvireonment(t)
-
-	router := createRouter(httphandlerConfig, middlewareConfig, nil)
+	stats := stats.NewStats()
+	httphandlerConfig, middlewareConfig := createTestEnvireonment(t, stats)
+	router := createRouter(httphandlerConfig, middlewareConfig, stats)
 
 	tests := []struct {
 		name               string
@@ -98,9 +101,9 @@ func TestLegacyRoutes(t *testing.T) {
 }
 
 func TestRoutesUploadDownload(t *testing.T) {
-	httphandlerConfig, middlewareConfig := createTestEnvireonment(t)
-
-	router := createRouter(httphandlerConfig, middlewareConfig, nil)
+	stats := stats.NewStats()
+	httphandlerConfig, middlewareConfig := createTestEnvireonment(t, stats)
+	router := createRouter(httphandlerConfig, middlewareConfig, stats)
 
 	tests := []struct {
 		name               string
@@ -134,9 +137,9 @@ func TestRoutesUploadDownload(t *testing.T) {
 }
 
 func TestRoutesUploadDownloadDelete(t *testing.T) {
-	httphandlerConfig, middlewareConfig := createTestEnvireonment(t)
-
-	router := createRouter(httphandlerConfig, middlewareConfig, nil)
+	stats := stats.NewStats()
+	httphandlerConfig, middlewareConfig := createTestEnvireonment(t, stats)
+	router := createRouter(httphandlerConfig, middlewareConfig, stats)
 
 	tests := []struct {
 		name               string
@@ -171,9 +174,9 @@ func TestRoutesUploadDownloadDelete(t *testing.T) {
 }
 
 func TestLegacyRoutesWithDifferentPathEndings(t *testing.T) {
-	httphandlerConfig, middlewareConfig := createTestEnvireonment(t)
-
-	router := createRouter(httphandlerConfig, middlewareConfig, nil)
+	stats := stats.NewStats()
+	httphandlerConfig, middlewareConfig := createTestEnvireonment(t, stats)
+	router := createRouter(httphandlerConfig, middlewareConfig, stats)
 
 	tests := []struct {
 		name               string
@@ -208,9 +211,9 @@ func TestLegacyRoutesWithDifferentPathEndings(t *testing.T) {
 }
 
 func TestRoutesPatchDownload(t *testing.T) {
-	httphandlerConfig, middlewareConfig := createTestEnvireonment(t)
-
-	router := createRouter(httphandlerConfig, middlewareConfig, nil)
+	stats := stats.NewStats()
+	httphandlerConfig, middlewareConfig := createTestEnvireonment(t, stats)
+	router := createRouter(httphandlerConfig, middlewareConfig, stats)
 
 	tests := []struct {
 		name               string
