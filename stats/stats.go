@@ -7,7 +7,7 @@
 //
 // Note: This package stores all data in memory. For high-load or long-running
 // applications, consider persisting data to a database or using a more
-// sophisticated time-series data structure.package stats
+// sophisticated time-series data structure.
 package stats
 
 import (
@@ -22,22 +22,19 @@ type Stats struct {
 }
 
 type StatsData struct {
-	CountDownload int
-	CountUpload   int
-
-	CountLast24hDownload int
-	CountLast24hUpload   int
-
-	HTTPError        int
-	HTTPLast24hError int
-
-	CountRateLimitHits int
-	RateLimitIPs       []RateLimitIP
+	DownloadCount         int
+	UploadCount           int
+	Last24hDownloadCount  int
+	Last24hUploadCount    int
+	HTTPErrorCount        int
+	Last24hHTTPErrorCount int
+	RateLimitHitCount     int
+	RateLimitedIPs        []RateLimitedIP
 }
 
-type RateLimitIP struct {
-	IP       string
-	Requests int
+type RateLimitedIP struct {
+	IP           string
+	RequestCount int
 }
 
 func NewStats() *Stats {
@@ -54,33 +51,33 @@ func (s *Stats) GetCurrentStats() StatsData {
 	return s.data
 }
 
-func (s *Stats) IncrementDownload() {
+func (s *Stats) IncrementDownloads() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.data.CountDownload++
+	s.data.DownloadCount++
 	s.addToLast24h(func(sd *StatsData) {
-		sd.CountDownload++
+		sd.DownloadCount++
 	})
 }
 
-func (s *Stats) IncrementUpload() {
+func (s *Stats) IncrementUploads() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.data.CountUpload++
+	s.data.UploadCount++
 	s.addToLast24h(func(sd *StatsData) {
-		sd.CountUpload++
+		sd.UploadCount++
 	})
 }
 
-func (s *Stats) IncrementHTTPError() {
+func (s *Stats) IncrementHTTPErrors() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.data.HTTPError++
+	s.data.HTTPErrorCount++
 	s.addToLast24h(func(sd *StatsData) {
-		sd.HTTPError++
+		sd.HTTPErrorCount++
 	})
 }
 
@@ -88,17 +85,17 @@ func (s *Stats) RecordRateLimitHit(ip string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.data.CountRateLimitHits++
+	s.data.RateLimitHitCount++
 	found := false
-	for i, rlIP := range s.data.RateLimitIPs {
+	for i, rlIP := range s.data.RateLimitedIPs {
 		if rlIP.IP == ip {
-			s.data.RateLimitIPs[i].Requests++
+			s.data.RateLimitedIPs[i].RequestCount++
 			found = true
 			break
 		}
 	}
 	if !found {
-		s.data.RateLimitIPs = append(s.data.RateLimitIPs, RateLimitIP{IP: ip, Requests: 1})
+		s.data.RateLimitedIPs = append(s.data.RateLimitedIPs, RateLimitedIP{IP: ip, RequestCount: 1})
 	}
 }
 
@@ -116,17 +113,17 @@ func (s *Stats) updateLast24hStats() {
 	now := time.Now()
 	cutoff := now.Add(-24 * time.Hour)
 
-	s.data.CountLast24hDownload = 0
-	s.data.CountLast24hUpload = 0
-	s.data.HTTPLast24hError = 0
+	s.data.Last24hDownloadCount = 0
+	s.data.Last24hUploadCount = 0
+	s.data.Last24hHTTPErrorCount = 0
 
 	for t, sd := range s.last24h {
 		if t.Before(cutoff) {
 			delete(s.last24h, t)
 		} else {
-			s.data.CountLast24hDownload += sd.CountDownload
-			s.data.CountLast24hUpload += sd.CountUpload
-			s.data.HTTPLast24hError += sd.HTTPError
+			s.data.Last24hDownloadCount += sd.DownloadCount
+			s.data.Last24hUploadCount += sd.UploadCount
+			s.data.Last24hHTTPErrorCount += sd.HTTPErrorCount
 		}
 	}
 }

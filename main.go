@@ -22,8 +22,8 @@ import (
 const (
 	// Server configuration
 	MaxRequestSize     = 1024 * 10 // 10 KB for request size limit
-	RateLimitPerSecond = 10        // Requests per second
-	RateLimitBurst     = 5         // Burst capability
+	RateLimitPerSecond = 100       // Requests per second
+	RateLimitBurst     = 10        // Burst capability
 
 	// Database and server paths
 	DefaultStorePath       = "./data"
