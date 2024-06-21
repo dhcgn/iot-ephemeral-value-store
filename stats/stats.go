@@ -44,7 +44,6 @@ func NewStats() *Stats {
 		data: StatsData{
 			StartTime: time.Now(),
 		},
-		mu: sync.RWMutex{},
 	}
 }
 
