@@ -26,10 +26,10 @@ func (c Config) RateLimit(next http.Handler) http.Handler {
 		}
 
 		// Exclude local IP addresses from rate limiting
-		// if ip == "127.0.0.1" || ip == "::1" {
-		// 	next.ServeHTTP(w, r)
-		// 	return
-		// }
+		if ip == "127.0.0.1" || ip == "::1" {
+			next.ServeHTTP(w, r)
+			return
+		}
 
 		limiter := c.getLimiter(ip)
 		if !limiter.Allow() {
