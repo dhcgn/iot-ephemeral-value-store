@@ -33,7 +33,7 @@ var key_down = "fcbbda7c04eba41d060b70d1bf7fde8c4a148a087729017d22fc54037c9eb11b
 func TestCreateRouter(t *testing.T) {
 	httphandlerConfig, middlewareConfig := createTestEnvireonment(t)
 
-	router := createRouter(httphandlerConfig, middlewareConfig)
+	router := createRouter(httphandlerConfig, middlewareConfig, nil)
 
 	tests := []struct {
 		name               string
@@ -64,7 +64,7 @@ func TestCreateRouter(t *testing.T) {
 func TestLegacyRoutes(t *testing.T) {
 	httphandlerConfig, middlewareConfig := createTestEnvireonment(t)
 
-	router := createRouter(httphandlerConfig, middlewareConfig)
+	router := createRouter(httphandlerConfig, middlewareConfig, nil)
 
 	tests := []struct {
 		name               string
@@ -100,7 +100,7 @@ func TestLegacyRoutes(t *testing.T) {
 func TestRoutesUploadDownload(t *testing.T) {
 	httphandlerConfig, middlewareConfig := createTestEnvireonment(t)
 
-	router := createRouter(httphandlerConfig, middlewareConfig)
+	router := createRouter(httphandlerConfig, middlewareConfig, nil)
 
 	tests := []struct {
 		name               string
@@ -136,7 +136,7 @@ func TestRoutesUploadDownload(t *testing.T) {
 func TestRoutesUploadDownloadDelete(t *testing.T) {
 	httphandlerConfig, middlewareConfig := createTestEnvireonment(t)
 
-	router := createRouter(httphandlerConfig, middlewareConfig)
+	router := createRouter(httphandlerConfig, middlewareConfig, nil)
 
 	tests := []struct {
 		name               string
@@ -173,7 +173,7 @@ func TestRoutesUploadDownloadDelete(t *testing.T) {
 func TestLegacyRoutesWithDifferentPathEndings(t *testing.T) {
 	httphandlerConfig, middlewareConfig := createTestEnvireonment(t)
 
-	router := createRouter(httphandlerConfig, middlewareConfig)
+	router := createRouter(httphandlerConfig, middlewareConfig, nil)
 
 	tests := []struct {
 		name               string
@@ -210,7 +210,7 @@ func TestLegacyRoutesWithDifferentPathEndings(t *testing.T) {
 func TestRoutesPatchDownload(t *testing.T) {
 	httphandlerConfig, middlewareConfig := createTestEnvireonment(t)
 
-	router := createRouter(httphandlerConfig, middlewareConfig)
+	router := createRouter(httphandlerConfig, middlewareConfig, nil)
 
 	tests := []struct {
 		name               string

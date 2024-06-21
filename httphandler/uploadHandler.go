@@ -51,6 +51,8 @@ func (c Config) handleUpload(w http.ResponseWriter, r *http.Request, uploadKey, 
 	}
 	c.StorageInstance.Store(downloadKey, data)
 
+	c.StatsInstance.IncrementUpload()
+
 	// Construct and return response
 	constructAndReturnResponse(w, r, downloadKey, paramMap)
 }

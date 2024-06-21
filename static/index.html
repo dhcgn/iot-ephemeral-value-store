@@ -102,6 +102,30 @@
             <li><strong>Data retention:</strong> {{.DataRetention}}</li>
         </ul>
 
+        <h2>Server Stats</h2>
+        <ul>
+            <li><strong>Uptime:</strong> {{.Uptime}}</li>
+            <li><strong>Count Download/Uploads since Start:</strong> {{.StateData.CountDownload}}/{{.StateData.CountUpload}}</li>
+            <li><strong>Count Download/Uploads last 24:</strong> {{.StateData.CountLast24hDownload}}/{{.StateData.CountLast24hUpload}}</li>
+            <li><strong>Count HTTP Error since Start:</strong> {{.StateData.HTTPError}}</li>
+            <li><strong>Count HTTP Error last 24:</strong> {{.StateData.HTTPLast24hError}}</li>
+            <li><strong>Count Rate Limit Counts:</strong> {{.StateData.CountRateLimitHits}}</li>
+        </ul>
+
+<!-- Table of affected IPs of rate limit -->
+        <h2>Rate Limit Stats</h2>
+        <table>
+            <tr>
+                <th>IP</th>
+                <th>Count</th>
+            </tr>
+            {{range $ip, $count := .StateData.RateLimitIPs}}
+            <tr>
+                <td>{{$ip}}</td>
+                <td>{{$count}}</td>
+            </tr>
+            {{end}}
+
         <h2>API Usage</h2>
         <ul>
             <li><strong>Create Key Pair:</strong> <code>GET /kp</code></li>
