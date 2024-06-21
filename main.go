@@ -166,6 +166,8 @@ func templateHandler(tmpl *template.Template, stats *stats.Stats) http.HandlerFu
 			Version:       Version,
 			BuildTime:     BuildTime,
 
+			Uptime: stats.GetUptime(),
+
 			StateData: stats.GetCurrentStats(),
 		}
 		tmpl.Execute(w, data)

@@ -30,6 +30,7 @@ type StatsData struct {
 	Last24hHTTPErrorCount int
 	RateLimitHitCount     int
 	RateLimitedIPs        []RateLimitedIP
+	StartTime             time.Time
 }
 
 type RateLimitedIP struct {
@@ -40,6 +41,9 @@ type RateLimitedIP struct {
 func NewStats() *Stats {
 	return &Stats{
 		last24h: make(map[time.Time]StatsData),
+		data: StatsData{
+			StartTime: time.Now(),
+		},
 	}
 }
 
@@ -126,4 +130,8 @@ func (s *Stats) updateLast24hStats() {
 			s.data.Last24hHTTPErrorCount += sd.HTTPErrorCount
 		}
 	}
+}
+
+func (s *Stats) GetUptime() time.Duration {
+	return time.Since(s.data.StartTime)
 }
