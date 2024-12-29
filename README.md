@@ -1,5 +1,5 @@
 [![Go](https://github.com/dhcgn/iot-ephemeral-value-store/actions/workflows/build_and_test.yml/badge.svg)](https://github.com/dhcgn/iot-ephemeral-value-store/actions/workflows/build_and_test.yml)
-[![Coverage Status](https://coveralls.io/repos/github/dhcgn/iot-ephemeral-value-store/badge.svg?branch=main)](https://coveralls.io/github/dhcgn/iot-ephemeral-value-store?branch=main)
+[![codecov](https://codecov.io/gh/dhcgn/iot-ephemeral-value-store/graph/badge.svg?token=LLTOitLLDc)](https://codecov.io/gh/dhcgn/iot-ephemeral-value-store)
 
 # iot-ephemeral-value-store
 
