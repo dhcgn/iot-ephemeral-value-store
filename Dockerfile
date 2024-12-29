@@ -9,7 +9,8 @@ ARG BUILDTIME=unknown
 COPY . .
 
 # Build the application with version info
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "\
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags "\
+    -s -w \
     -X main.Version=${VERSION} \
     -X main.Commit=${COMMIT} \
     -X main.BuildTime=${BUILDTIME}" \

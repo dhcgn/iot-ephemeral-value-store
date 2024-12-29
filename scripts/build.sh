@@ -21,4 +21,4 @@ COMMIT=$(git rev-parse --short HEAD)
 BUILDTIME=$(date -u '+%Y-%m-%d_%H:%M:%S')
 
 # Build the main package instead of all packages
-go build -v -o "${OUTPUT_FILE}" -ldflags "-X main.Version=${VERSION} -X main.Commit=${COMMIT} -X main.BuildTime=${BUILDTIME}" ./main.go
+go build -trimpath -v -o "${OUTPUT_FILE}" -ldflags "-s -w -X main.Version=${VERSION} -X main.Commit=${COMMIT} -X main.BuildTime=${BUILDTIME}" ./main.go
