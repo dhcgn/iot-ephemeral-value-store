@@ -63,7 +63,10 @@ func initFlags() {
 }
 
 func main() {
-	fmt.Println("Starting iot-ephemeral-value-store", Version, "Build:", BuildTime, "Commit:", Commit)
+	fmt.Println("Starting iot-ephemeral-value-store-server", Version, "Build:", BuildTime, "Commit:", Commit)
+	fmt.Println("https://github.com/dhcgn/iot-ephemeral-value-store")
+	fmt.Println("")
+
 	initFlags()
 
 	persistDuration, err := time.ParseDuration(persistDurationString)
