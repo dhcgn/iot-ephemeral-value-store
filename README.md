@@ -309,6 +309,71 @@ Using the `/patch/` endpoint, you can dynamically build and update complex JSON 
 iot-ephemeral-value-store-server -persist-values-for 1d -store ~/iot-ephemeral-value-store -port 8080
 ```
 
+### Docker Run
+
+```bash
+docker run -p 8080:8080 dhcgn/iot-ephemeral-value-store-server 
+```
+
+### Docker Compose Full Example
+
+```yaml
+version: "3.3"
+
+services:
+
+  traefik:
+    image: "traefik:v3.2"
+    container_name: "traefik"
+    command:
+      #- "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entryPoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      #- "--certificatesresolvers.myresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      - "--certificatesresolvers.myresolver.acme.email=hostmastet@my-domain-insert-here.com"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - traefik-letsencrypt:/letsencrypt
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  whoami:
+    image: "traefik/whoami"
+    container_name: "simple-service"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.my-domain-insert-here.com`)"
+      - "traefik.http.routers.whoami.entrypoints=websecure"
+      - "traefik.http.routers.whoami.tls.certresolver=myresolver"
+
+  iot-server:
+    image: "dhcgn/iot-ephemeral-value-store-server"
+    container_name: "iot-ephemeral-value-store-server"
+    volumes:
+      - iot-db:/db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.iot.rule=Host(`iot.my-domain-insert-here.com``)"
+      - "traefik.http.routers.iot.entrypoints=websecure"
+      - "traefik.http.routers.iot.tls.certresolver=myresolver"
+
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 3600 --cleanup iot-ephemeral-value-store-server
+    restart: unless-stopped
+
+volumes:
+  iot-db:
+  traefik-letsencrypt:
+```
+
 ### Install the Server as a System Service
 
 - Run the installation script as root:
