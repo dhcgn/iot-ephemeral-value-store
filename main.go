@@ -50,6 +50,7 @@ var (
 var (
 	Version   string = "dev"
 	BuildTime string = "unknown"
+	Commit    string = "unknown"
 )
 
 func initFlags() {
@@ -62,6 +63,7 @@ func initFlags() {
 }
 
 func main() {
+	fmt.Println("Starting iot-ephemeral-value-store", Version, "Build:", BuildTime, "Commit:", Commit)
 	initFlags()
 
 	persistDuration, err := time.ParseDuration(persistDurationString)
@@ -88,7 +90,7 @@ func main() {
 
 	r := createRouter(httphandlerConfig, middlewareConfig, stats)
 
-	serverAddress := fmt.Sprintf("127.0.0.1:%d", port)
+	serverAddress := fmt.Sprintf(":%d", port)
 	srv := &http.Server{
 		Handler:      r,
 		Addr:         serverAddress,
@@ -96,7 +98,7 @@ func main() {
 		ReadTimeout:  ReadTimeout,
 	}
 
-	fmt.Printf("Starting server on http://%s\n", serverAddress)
+	fmt.Printf("Starting server on http://localhost:%v\n", port)
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}

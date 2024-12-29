@@ -1,57 +1,47 @@
-name: Release
+name: Go Release
 
 on:
   push:
     tags:
       - 'v*'
 
+permissions:
+  contents: write  # Required for creating releases
+
 jobs:
   build:
-    name: Build and Release
     runs-on: ubuntu-latest
-
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all history and tags
 
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.22'  # Specify the Go version
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23'
 
-      - name: Get dependencies
-        run: go mod tidy
+    - name: Build Windows
+      env:
+        GOOS: windows
+        GOARCH: amd64
+      run: |
+        chmod +x ./scripts/build.sh
+        ./scripts/build.sh iot-ephemeral-value-store-server-windows-am64.exe
 
-      - name: Build binary and set main.Version and main.BuildTime
-        env:
-          CGO_ENABLED: 0
-        run: |
-          TAG_NAME=${GITHUB_REF#refs/tags/}
-          BUILD_TIME=$(date +%Y-%m-%dT%H:%M:%SZ)
-          GOOS=linux GOARCH=amd64 go build -ldflags="-w -s -X main.Version=${TAG_NAME} -X main.BuildTime=${BUILD_TIME}" -o iot-ephemeral-value-store-server main.go
-          chmod +x iot-ephemeral-value-store-server
-        
+    - name: Build Linux
+      env:
+         GOOS: linux
+         GOARCH: amd64
+      run: |
+          chmod +x ./scripts/build.sh
+          ./scripts/build.sh iot-ephemeral-value-store-server-linux-am64.bin
 
-      - name: Package files
-        run: tar czvf iot-ephemeral-value-store-server.tar.gz iot-ephemeral-value-store-server
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./iot-ephemeral-value-store-server.tar.gz
-          asset_name: iot-ephemeral-value-store-server.tar.gz
-          asset_content_type: application/gzip
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: |
+          iot-ephemeral-value-store-server-windows-am64.exe
+          iot-ephemeral-value-store-server-linux-am64.bin
+          
