@@ -29,4 +29,5 @@ git tag $version
 
 # Push the new tag
 Write-Host "New version tag: $version"
-Write-Host "Execute: git push origin $version"
+Write-Host "Execute: " -NoNewline
+Write-Host "git push origin $version" -ForegroundColor Magenta
