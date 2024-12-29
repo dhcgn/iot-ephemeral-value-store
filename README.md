@@ -22,6 +22,40 @@ This project provides a simple HTTP server that offers ephemeral storage for IoT
 - Data is stored for a configurable duration before being deleted.
 - The server can be run on a local network or in the cloud.
 
+### Quick Start
+
+**Upload Data**
+
+In this example we use the patch feature and upload multiple values to the same key but different paths.
+
+```bash
+curl https://iot.hdev.io/patch/abb0c54ca2b3dbecc3c781f2de6d0e1c62c6cd8a59c82932ac68c746416d8134/?name1=value
+curl https://iot.hdev.io/patch/abb0c54ca2b3dbecc3c781f2de6d0e1c62c6cd8a59c82932ac68c746416d8134/location_1/?name=value
+curl https://iot.hdev.io/patch/abb0c54ca2b3dbecc3c781f2de6d0e1c62c6cd8a59c82932ac68c746416d8134/location_2/?name=value
+```
+
+**Download Data**
+
+```bash
+curl https://iot.hdev.io/d/233e9c1fdb3cc310e487dc35313740d68b2078f58c1395ac95c599dbfeb51ee7/json
+```
+
+```json
+{
+  "location_1": {
+    "name": "value",
+    "timestamp": "2024-12-29T18:51:07Z"
+  },
+  "location_2": {
+    "name": "value",
+    "timestamp": "2024-12-29T18:51:06Z"
+  },
+  "name1": "value",
+  "name1_timestamp": "2024-12-29T18:51:08Z",
+  "timestamp": "2024-12-29T18:51:08Z"
+}
+```
+
 ## Self-Hosted Info Website
 
 The iot-ephemeral-value-store server includes a self-hosted info website that provides valuable information about the server's status, usage, and API. This website is automatically available when you run the server and can be accessed at the root URL (e.g., `http://127.0.0.1:8088/`).
