@@ -111,6 +111,20 @@ func TestRoutesUploadDownload(t *testing.T) {
 	runTests(t, router, tests)
 }
 
+func TestRoutesUploadDownloadWithBase64(t *testing.T) {
+	stats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
+	router := createRouter(httphandlerConfig, middlewareConfig, stats)
+
+	tests := []testCase{
+		{"Upload", buildURL("/u/%s/?value=SGFsbG8gV2VsdCEK", keyUp), http.StatusOK, true, "Data uploaded successfully", ""},
+		{"Download Plain", buildURL("/d/%s/plain/value", keyDown), http.StatusOK, true, "SGFsbG8gV2VsdCEK\n", ""},
+		{"Download Plain decoded from Base64url", buildURL("/d/%s/plain-from-base64url/value", keyDown), http.StatusOK, true, "Hallo Welt!\n", ""},
+		{"Download JSON", buildURL("/d/%s/json", keyDown), http.StatusOK, true, "\"value\":\"SGFsbG8gV2VsdCEK\"", ""},
+	}
+
+	runTests(t, router, tests)
+}
+
 func TestRoutesUploadDownloadDelete(t *testing.T) {
 	stats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
 	router := createRouter(httphandlerConfig, middlewareConfig, stats)

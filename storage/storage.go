@@ -111,3 +111,10 @@ func (c StorageInstance) Delete(downloadKey string) error {
 		return txn.Delete([]byte(downloadKey))
 	})
 }
+
+func (c StorageInstance) StoreRawForTesting(downloadKey string, data []byte) error {
+	return c.Db.Update(func(txn *badger.Txn) error {
+		e := badger.NewEntry([]byte(downloadKey), data).WithTTL(c.PersistDuration)
+		return txn.SetEntry(e)
+	})
+}

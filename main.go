@@ -125,15 +125,16 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, stats *stats.Sta
 	// Legacy routes
 	r.HandleFunc("/{uploadKey}", hhc.UploadHandler).Methods("GET")
 	r.HandleFunc("/{uploadKey}/", hhc.UploadHandler).Methods("GET")
-	r.HandleFunc("/{downloadKey}/json", hhc.DownloadHandler).Methods("GET")
-	r.HandleFunc("/{downloadKey}/plain/{param}", hhc.PlainDownloadHandler).Methods("GET")
+	r.HandleFunc("/{downloadKey}/json", hhc.DownloadJsonHandler).Methods("GET")
+	r.HandleFunc("/{downloadKey}/plain/{param}", hhc.DownloadPlainHandler).Methods("GET")
 
 	// New routes
 	r.HandleFunc("/u/{uploadKey}", hhc.UploadHandler).Methods("GET")
 	r.HandleFunc("/u/{uploadKey}/", hhc.UploadHandler).Methods("GET")
 
-	r.HandleFunc("/d/{downloadKey}/json", hhc.DownloadHandler).Methods("GET")
-	r.HandleFunc("/d/{downloadKey}/plain/{param:.*}", hhc.PlainDownloadHandler).Methods("GET")
+	r.HandleFunc("/d/{downloadKey}/json", hhc.DownloadJsonHandler).Methods("GET")
+	r.HandleFunc("/d/{downloadKey}/plain/{param:.*}", hhc.DownloadPlainHandler).Methods("GET")
+	r.HandleFunc("/d/{downloadKey}/plain-from-base64url/{param:.*}", hhc.DownloadBase64Handler).Methods("GET")
 	// New routes with nestetd paths, eg. /u/1234/param1
 	r.HandleFunc("/patch/{uploadKey}", hhc.UploadAndPatchHandler).Methods("GET")
 	r.HandleFunc("/patch/{uploadKey}/{param:.*}", hhc.UploadAndPatchHandler).Methods("GET")

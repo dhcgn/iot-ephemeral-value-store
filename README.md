@@ -3,15 +3,17 @@
 
 # iot-ephemeral-value-store
 
-This project provides a simple HTTP server that offers ephemeral storage for IoT data. It generates unique key pairs for data upload and retrieval, stores data temporarily based on a configurable duration, and allows data to be fetched in both JSON and plain text formats.
+This project provides a simple HTTP server that offers ephemeral storage for IoT data. It generates unique key pairs for data upload and retrieval, stores data temporarily based on a configurable duration, and allows data to be fetched in both JSON and plain text formats. The key pairs ensure that you can securely share the download key, but only you can upload data using the upload key.
 
 ## Features
 
 - **Key Pair Generation**: Generate unique upload and download keys for secure data handling.
 - **Data Upload**: Upload data with a simple GET request using the generated upload key.
-- **Data Retrieval**: Retrieve stored data using the download key, either as JSON or plain text for specific data fields.
-- **Patch Feature**: Combine different uploads into a single JSON structure, which can be downloaded with one call.
+- **Data Retrieval**: Retrieve stored data using the download key, either as JSON, plain text, or base64 encoded for specific data fields.
+- **Patch Feature**: Combine different uploads into a single JSON structure, which can be downloaded with one call. Use one upload key for multiple values.
 - **Privacy**: Separate keys for upload and download to ensure secure and private data handling.
+- **Base64 Decoding**: Server-side base64 decoding for easy usage.
+- **Simple HTTP GET**: All operations are done using HTTP GET requests, making it compatible with very simple IoT technology.
 
 ## Why?
 

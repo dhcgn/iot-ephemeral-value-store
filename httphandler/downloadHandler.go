@@ -1,6 +1,7 @@
 package httphandler
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,7 +10,11 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func (c Config) PlainDownloadHandler(w http.ResponseWriter, r *http.Request) {
+func (c Config) DownloadPlainHandler(w http.ResponseWriter, r *http.Request) {
+	c.downloadPlainHandler(w, r, false)
+}
+
+func (c Config) downloadPlainHandler(w http.ResponseWriter, r *http.Request, base64mode bool) {
 	vars := mux.Vars(r)
 	downloadKey := vars["downloadKey"]
 	param := vars["param"]
@@ -49,6 +54,17 @@ func (c Config) PlainDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// If base64 mode is enabled, decode the value from base64url
+	if base64mode {
+		decoded, err := decodeBase64URL(value.(string))
+		if err != nil {
+			c.StatsInstance.IncrementHTTPErrors()
+			http.Error(w, "Error decoding base64url", http.StatusInternalServerError)
+			return
+		}
+		value = decoded
+	}
+
 	c.StatsInstance.IncrementDownloads()
 
 	// Return the value as plain text
@@ -56,7 +72,28 @@ func (c Config) PlainDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, value)
 }
 
-func (c Config) DownloadHandler(w http.ResponseWriter, r *http.Request) {
+func decodeBase64URL(encoded string) (string, error) {
+	// Try decoding with standard base64
+	decodedBytes, err := base64.StdEncoding.DecodeString(encoded)
+	if err == nil {
+		return string(decodedBytes), nil
+	}
+
+	// Try decoding with base64url
+	decodedBytes, err = base64.URLEncoding.DecodeString(encoded)
+	if err == nil {
+		return string(decodedBytes), nil
+	}
+
+	// Try decoding with base64url without padding
+	decodedBytes, err = base64.StdEncoding.WithPadding(base64.NoPadding).DecodeString(encoded)
+	if err != nil {
+		return "", err
+	}
+	return string(decodedBytes), nil
+}
+
+func (c Config) DownloadJsonHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	downloadKey := vars["downloadKey"]
 
@@ -72,4 +109,8 @@ func (c Config) DownloadHandler(w http.ResponseWriter, r *http.Request) {
 	// Set header and write the JSON data to the response writer
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonData)
+}
+
+func (c Config) DownloadBase64Handler(w http.ResponseWriter, r *http.Request) {
+	c.downloadPlainHandler(w, r, true)
 }

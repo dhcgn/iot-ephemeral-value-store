@@ -1,6 +1,7 @@
 package httphandler
 
 import (
+	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,8 +13,9 @@ import (
 
 func Test_PlainDownloadHandler(t *testing.T) {
 	type args struct {
-		w http.ResponseWriter
-		r *http.Request
+		w          http.ResponseWriter
+		r          *http.Request
+		base64mode bool
 	}
 	tests := []struct {
 		name                   string
@@ -100,11 +102,126 @@ func Test_PlainDownloadHandler(t *testing.T) {
 			expectedHTTPErrorCount: 0,
 			expectedDownloadCount:  1,
 		},
+		{
+			name: "PlainDownloadHandler - error decoding JSON",
+			c: Config{
+				StatsInstance: stats.NewStats(),
+				StorageInstance: func() storage.Storage {
+					s := storage.NewInMemoryStorage()
+					// Store invalid JSON data
+					s.StoreRawForTesting("validKey", []byte(`{"key": "value"`)) // Missing closing brace
+					return s
+				}(),
+			},
+			args: args{
+				w: httptest.NewRecorder(),
+				r: func() *http.Request {
+					req, _ := http.NewRequest("GET", "/download/validKey/key", nil)
+					vars := map[string]string{
+						"downloadKey": "validKey",
+						"param":       "key",
+					}
+					return mux.SetURLVars(req, vars)
+				}(),
+			},
+			expectedStatus:         http.StatusInternalServerError,
+			expectedBody:           "Error decoding JSON\n",
+			expectedHTTPErrorCount: 1,
+			expectedDownloadCount:  0,
+		},
+		{
+			name: "PlainDownloadHandler - invalid parameter path",
+			c: Config{
+				StatsInstance: stats.NewStats(),
+				StorageInstance: func() storage.Storage {
+					s := storage.NewInMemoryStorage()
+					data := map[string]interface{}{"key": "value"}
+					s.Store("validKey", data)
+					return s
+				}(),
+			},
+			args: args{
+				w: httptest.NewRecorder(),
+				r: func() *http.Request {
+					req, _ := http.NewRequest("GET", "/download/validKey/key/invalidPath", nil)
+					vars := map[string]string{
+						"downloadKey": "validKey",
+						"param":       "key/invalidPath",
+					}
+					return mux.SetURLVars(req, vars)
+				}(),
+			},
+			expectedStatus:         http.StatusBadRequest,
+			expectedBody:           "Invalid parameter path\n",
+			expectedHTTPErrorCount: 1,
+			expectedDownloadCount:  0,
+		},
+		{
+			name: "PlainDownloadHandler - error decoding base64url",
+			c: Config{
+				StatsInstance: stats.NewStats(),
+				StorageInstance: func() storage.Storage {
+					s := storage.NewInMemoryStorage()
+					data := map[string]interface{}{"key": "invalid_base64"}
+					s.Store("validKey", data)
+					return s
+				}(),
+			},
+			args: args{
+				w: httptest.NewRecorder(),
+				r: func() *http.Request {
+					req, _ := http.NewRequest("GET", "/download/validKey/plain-from-base64url/key", nil)
+					vars := map[string]string{
+						"downloadKey": "validKey",
+						"param":       "key",
+					}
+					return mux.SetURLVars(req, vars)
+				}(),
+				base64mode: true,
+			},
+			expectedStatus:         http.StatusInternalServerError,
+			expectedBody:           "Error decoding base64url\n",
+			expectedHTTPErrorCount: 1,
+			expectedDownloadCount:  0,
+		},
+		{
+			name: "PlainDownloadHandler - decoding base64url",
+			c: Config{
+				StatsInstance: stats.NewStats(),
+				StorageInstance: func() storage.Storage {
+					s := storage.NewInMemoryStorage()
+					base64string := base64.URLEncoding.EncodeToString([]byte("Hallo Welt!"))
+					data := map[string]interface{}{"key": base64string}
+					s.Store("validKey", data)
+					return s
+				}(),
+			},
+			args: args{
+				w: httptest.NewRecorder(),
+				r: func() *http.Request {
+					req, _ := http.NewRequest("GET", "/download/validKey/plain-from-base64url/key", nil)
+					vars := map[string]string{
+						"downloadKey": "validKey",
+						"param":       "key",
+					}
+					return mux.SetURLVars(req, vars)
+				}(),
+				base64mode: true,
+			},
+			expectedStatus:         http.StatusOK,
+			expectedBody:           "Hallo Welt!\n",
+			expectedHTTPErrorCount: 0,
+			expectedDownloadCount:  1,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.c.PlainDownloadHandler(tt.args.w, tt.args.r)
+			if tt.args.base64mode {
+				tt.c.DownloadBase64Handler(tt.args.w, tt.args.r)
+			} else {
+				tt.c.DownloadPlainHandler(tt.args.w, tt.args.r)
+			}
 
 			resp := tt.args.w.(*httptest.ResponseRecorder)
 			if resp.Code != tt.expectedStatus {
@@ -191,7 +308,7 @@ func Test_DownloadHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.c.DownloadHandler(tt.args.w, tt.args.r)
+			tt.c.DownloadJsonHandler(tt.args.w, tt.args.r)
 
 			resp := tt.args.w.(*httptest.ResponseRecorder)
 			if resp.Code != tt.expectedStatus {
