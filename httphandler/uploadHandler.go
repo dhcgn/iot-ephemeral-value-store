@@ -59,12 +59,17 @@ func (c Config) handleUpload(w http.ResponseWriter, r *http.Request, uploadKey, 
 }
 
 func constructAndReturnResponse(w http.ResponseWriter, r *http.Request, downloadKey string, params map[string]string) {
-	urls := make(map[string]string)
-	for key := range params {
-		urls[key] = fmt.Sprintf("http://%s/d/%s/plain/%s", r.Host, downloadKey, key)
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
 	}
 
-	downloadURL := fmt.Sprintf("http://%s/d/%s/json", r.Host, downloadKey)
+	urls := make(map[string]string)
+	for key := range params {
+		urls[key] = fmt.Sprintf("%s://%s/d/%s/plain/%s", scheme, r.Host, downloadKey, key)
+	}
+
+	downloadURL := fmt.Sprintf("%s://%s/d/%s/json", scheme, r.Host, downloadKey)
 
 	jsonResponse(w, map[string]interface{}{
 		"message":        "Data uploaded successfully",
