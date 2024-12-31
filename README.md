@@ -9,7 +9,7 @@ This project provides a simple HTTP server that offers ephemeral storage for IoT
 
 - **Key Pair Generation**: Generate unique upload and download keys for secure data handling.
 - **Data Upload**: Upload data with a simple GET request using the generated upload key.
-- **Data Retrieval**: Retrieve stored data using the download key, either as JSON or plain text for specific data fields.
+- **Data Retrieval**: Retrieve stored data using the download key, either as JSON, plain text, or base64 encoded for specific data fields.
 - **Patch Feature**: Combine different uploads into a single JSON structure, which can be downloaded with one call.
 - **Privacy**: Separate keys for upload and download to ensure secure and private data handling.
 
