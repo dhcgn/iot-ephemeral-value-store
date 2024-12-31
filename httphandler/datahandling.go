@@ -5,17 +5,6 @@ import (
 	"time"
 )
 
-func collectParams(params map[string][]string) map[string]string {
-	paramMap := make(map[string]string)
-	for key, values := range params {
-		if len(values) > 0 {
-			sanitizedValue := sanitizeInput(values[0])
-			paramMap[key] = sanitizedValue
-		}
-	}
-	return paramMap
-}
-
 func addTimestampToThisData(paramMap map[string]string, path string) {
 	// if using patch and path is empty than add a timestamp with the value suffix
 	if path == "" {
