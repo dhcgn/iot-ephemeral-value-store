@@ -73,7 +73,20 @@ func (c Config) downloadPlainHandler(w http.ResponseWriter, r *http.Request, bas
 }
 
 func decodeBase64URL(encoded string) (string, error) {
-	decodedBytes, err := base64.URLEncoding.DecodeString(encoded)
+	// Try decoding with standard base64
+	decodedBytes, err := base64.StdEncoding.DecodeString(encoded)
+	if err == nil {
+		return string(decodedBytes), nil
+	}
+
+	// Try decoding with base64url
+	decodedBytes, err = base64.URLEncoding.DecodeString(encoded)
+	if err == nil {
+		return string(decodedBytes), nil
+	}
+
+	// Try decoding with base64url without padding
+	decodedBytes, err = base64.StdEncoding.WithPadding(base64.NoPadding).DecodeString(encoded)
 	if err != nil {
 		return "", err
 	}

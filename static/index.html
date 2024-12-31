@@ -95,6 +95,14 @@
             <a class="dynamic-link" data-path="/delete/{{.UploadKey}}">/u/{{.UploadKey}}/?name=value</a><br>
         </p>
 
+        <h2>Advanded mode (base64)</h2>
+        <p>
+            <h4>Upload data base64url encoded</h4>
+            <a class="dynamic-link" data-path="/u/{{.UploadKey}}/?some_name=SGFsbG8gV2VsdCE">/u/{{.UploadKey}}/?some_name=SGFsbG8gV2VsdCE</a><br>
+            <h4>Download data base64url decoded</h4>
+            <a class="dynamic-link" data-path="/d/{{.DownloadKey}}/plain-from-base64url/some_name">/d/{{.DownloadKey}}/plain-from-base64url/some_name</a><br>
+        </p>
+
         <h2>Server Settings</h2>
         <ul>
             <li><strong>Software Version:</strong> {{.Version}}</li>
