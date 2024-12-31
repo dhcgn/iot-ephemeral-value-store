@@ -1,5 +1,6 @@
 [![Go](https://github.com/dhcgn/iot-ephemeral-value-store/actions/workflows/build_and_test.yml/badge.svg)](https://github.com/dhcgn/iot-ephemeral-value-store/actions/workflows/build_and_test.yml)
 [![codecov](https://codecov.io/gh/dhcgn/iot-ephemeral-value-store/graph/badge.svg?token=LLTOitLLDc)](https://codecov.io/gh/dhcgn/iot-ephemeral-value-store)
+[![Go Report Card](https://goreportcard.com/badge/github.com/dhcgn/iot-ephemeral-value-store)](https://goreportcard.com/report/github.com/dhcgn/iot-ephemeral-value-store)
 
 # iot-ephemeral-value-store
 
