@@ -104,7 +104,7 @@ func Test_PlainDownloadHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.c.PlainDownloadHandler(tt.args.w, tt.args.r)
+			tt.c.DownloadPlainHandler(tt.args.w, tt.args.r)
 
 			resp := tt.args.w.(*httptest.ResponseRecorder)
 			if resp.Code != tt.expectedStatus {
@@ -191,7 +191,7 @@ func Test_DownloadHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.c.DownloadHandler(tt.args.w, tt.args.r)
+			tt.c.DownloadJsonHandler(tt.args.w, tt.args.r)
 
 			resp := tt.args.w.(*httptest.ResponseRecorder)
 			if resp.Code != tt.expectedStatus {
