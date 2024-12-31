@@ -100,6 +100,33 @@ func Test_PlainDownloadHandler(t *testing.T) {
 			expectedHTTPErrorCount: 0,
 			expectedDownloadCount:  1,
 		},
+		{
+			name: "PlainDownloadHandler - error decoding JSON",
+			c: Config{
+				StatsInstance: stats.NewStats(),
+				StorageInstance: func() storage.Storage {
+					s := storage.NewInMemoryStorage()
+					// Store invalid JSON data
+					s.StoreRawForTesting("validKey", []byte(`{"key": "value"`)) // Missing closing brace
+					return s
+				}(),
+			},
+			args: args{
+				w: httptest.NewRecorder(),
+				r: func() *http.Request {
+					req, _ := http.NewRequest("GET", "/download/validKey/key", nil)
+					vars := map[string]string{
+						"downloadKey": "validKey",
+						"param":       "key",
+					}
+					return mux.SetURLVars(req, vars)
+				}(),
+			},
+			expectedStatus:         http.StatusInternalServerError,
+			expectedBody:           "Error decoding JSON\n",
+			expectedHTTPErrorCount: 1,
+			expectedDownloadCount:  0,
+		},
 	}
 
 	for _, tt := range tests {
