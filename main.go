@@ -62,6 +62,17 @@ func initFlags() {
 	myFlags.Parse(os.Args[1:])
 }
 
+var (
+	createStorage = func(storePath string, persistDuration time.Duration) storage.StorageInstance {
+		return storage.NewPersistentStorage(storePath, persistDuration)
+	}
+	listenAndServe = func(srv *http.Server) {
+		if err := srv.ListenAndServe(); err != nil {
+			log.Fatal("Failed to start server:", err)
+		}
+	}
+)
+
 func main() {
 	fmt.Println("Starting iot-ephemeral-value-store-server", Version, "Build:", BuildTime, "Commit:", Commit)
 	fmt.Println("https://github.com/dhcgn/iot-ephemeral-value-store")
@@ -76,7 +87,7 @@ func main() {
 
 	stats := stats.NewStats()
 
-	storage := storage.NewPersistentStorage(storePath, persistDuration)
+	storage := createStorage(storePath, persistDuration)
 	defer storage.Db.Close()
 
 	httphandlerConfig := httphandler.Config{
@@ -102,9 +113,7 @@ func main() {
 	}
 
 	fmt.Printf("Starting server on http://localhost:%v\n", port)
-	if err := srv.ListenAndServe(); err != nil {
-		log.Fatal("Failed to start server:", err)
-	}
+	listenAndServe(srv)
 }
 
 func createRouter(hhc httphandler.Config, mc middleware.Config, stats *stats.Stats) *mux.Router {
