@@ -110,10 +110,10 @@ func TestStoreRawForTesting(t *testing.T) {
 }
 
 func TestGetJSON(t *testing.T) {
-	storage := NewInMemoryStorage()
-	defer storage.Db.Close()
+	t.Run("GetJSON Success", func(t *testing.T) {
+		storage := NewInMemoryStorage()
+		defer storage.Db.Close()
 
-	t.Run("GetJSON", func(t *testing.T) {
 		key := "json_test_key"
 		data := map[string]interface{}{
 			"field": "value",
@@ -135,24 +135,40 @@ func TestGetJSON(t *testing.T) {
 		}
 	})
 
-	t.Run("GetJSON wrong key", func(t *testing.T) {
-		key := "json_test_key"
-		data := map[string]interface{}{
-			"field": "value",
-		}
+	t.Run("GetJSON Key Not Found", func(t *testing.T) {
+		storage := NewInMemoryStorage()
+		defer storage.Db.Close()
 
-		err := storage.Store(key, data)
-		if err != nil {
-			t.Fatalf("Failed to store data: %v", err)
-		}
+		key := "non_existent_key"
 
-		_, err = storage.GetJSON(key + "_wrong")
+		_, err := storage.GetJSON(key)
 		if err == nil {
 			t.Fatalf("Expected error, got nil")
 		}
 
 		if err.Error() != "Key not found" {
 			t.Errorf("Expected error 'Key not found', got %v", err)
+		}
+	})
+}
+
+func TestStoreJSONEncodingError(t *testing.T) {
+	storage := NewInMemoryStorage()
+	defer storage.Db.Close()
+
+	t.Run("Store JSON Encoding Error", func(t *testing.T) {
+		key := "json_encoding_error_key"
+		data := map[string]interface{}{
+			"invalid": make(chan int), // channels cannot be JSON encoded
+		}
+
+		err := storage.Store(key, data)
+		if err == nil {
+			t.Fatalf("Expected error, got nil")
+		}
+
+		if err.Error() != "error encoding data to JSON" {
+			t.Errorf("Expected error 'error encoding data to JSON', got %v", err)
 		}
 	})
 }
