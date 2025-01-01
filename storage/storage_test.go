@@ -84,3 +84,91 @@ func TestInMemoryStorage(t *testing.T) {
 		}
 	})
 }
+
+func TestStoreRawForTesting(t *testing.T) {
+	storage := NewInMemoryStorage()
+	defer storage.Db.Close()
+
+	t.Run("StoreRawForTesting", func(t *testing.T) {
+		key := "raw_test_key"
+		rawData := []byte(`{"raw": "data"}`)
+
+		err := storage.StoreRawForTesting(key, rawData)
+		if err != nil {
+			t.Fatalf("Failed to store raw data: %v", err)
+		}
+
+		retrieved, err := storage.Retrieve(key)
+		if err != nil {
+			t.Fatalf("Failed to retrieve data: %v", err)
+		}
+
+		if retrieved["raw"] != "data" {
+			t.Errorf("Retrieved data does not match stored raw data. Got %v", retrieved)
+		}
+	})
+}
+
+func TestGetJSON(t *testing.T) {
+	t.Run("GetJSON Success", func(t *testing.T) {
+		storage := NewInMemoryStorage()
+		defer storage.Db.Close()
+
+		key := "json_test_key"
+		data := map[string]interface{}{
+			"field": "value",
+		}
+
+		err := storage.Store(key, data)
+		if err != nil {
+			t.Fatalf("Failed to store data: %v", err)
+		}
+
+		jsonData, err := storage.GetJSON(key)
+		if err != nil {
+			t.Fatalf("Failed to get JSON data: %v", err)
+		}
+
+		expectedJSON := `{"field":"value"}`
+		if string(jsonData) != expectedJSON {
+			t.Errorf("Expected JSON %s, got %s", expectedJSON, string(jsonData))
+		}
+	})
+
+	t.Run("GetJSON Key Not Found", func(t *testing.T) {
+		storage := NewInMemoryStorage()
+		defer storage.Db.Close()
+
+		key := "non_existent_key"
+
+		_, err := storage.GetJSON(key)
+		if err == nil {
+			t.Fatalf("Expected error, got nil")
+		}
+
+		if err.Error() != "Key not found" {
+			t.Errorf("Expected error 'Key not found', got %v", err)
+		}
+	})
+}
+
+func TestStoreJSONEncodingError(t *testing.T) {
+	storage := NewInMemoryStorage()
+	defer storage.Db.Close()
+
+	t.Run("Store JSON Encoding Error", func(t *testing.T) {
+		key := "json_encoding_error_key"
+		data := map[string]interface{}{
+			"invalid": make(chan int), // channels cannot be JSON encoded
+		}
+
+		err := storage.Store(key, data)
+		if err == nil {
+			t.Fatalf("Expected error, got nil")
+		}
+
+		if err.Error() != "error encoding data to JSON" {
+			t.Errorf("Expected error 'error encoding data to JSON', got %v", err)
+		}
+	})
+}
