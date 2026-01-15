@@ -146,6 +146,9 @@ func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var fields []FieldData
+	if len(paramMap) > 0 {
+		fields = make([]FieldData, 0, len(paramMap))
+	}
 	for key := range paramMap {
 		fields = append(fields, FieldData{
 			URLEncoded: url.PathEscape(key),
