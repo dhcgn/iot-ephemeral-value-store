@@ -434,7 +434,7 @@
             try {
                 const stored = localStorage.getItem(POLL_INTERVAL_KEY);
                 if (stored) {
-                    const storedValue = parseInt(stored);
+                    const storedValue = parseInt(stored, 10);
                     // Validate: must be one of the allowed values
                     const allowedValues = [5000, 10000, 30000, 60000, 300000];
                     if (allowedValues.includes(storedValue)) {
@@ -453,7 +453,7 @@
 
         // Update poll interval
         function updatePollInterval() {
-            const newValue = parseInt(document.getElementById('pollInterval').value);
+            const newValue = parseInt(document.getElementById('pollInterval').value, 10);
             // Validate: must be one of the allowed values
             const allowedValues = [5000, 10000, 30000, 60000, 300000];
             if (!allowedValues.includes(newValue)) {
@@ -541,7 +541,9 @@
                 saveKeysToStorage();
                 renderKeys();
 
-                alert('New key pair created successfully!\nUpload Key: ' + uploadKey + '\nDownload Key: ' + downloadKey);
+                // Success message without exposing keys in alert
+                // Keys are visible in the UI below
+                alert('New key pair created successfully! The keys are displayed below in the watched keys section.');
 
             } catch (e) {
                 console.error('Error creating key pair:', e);
