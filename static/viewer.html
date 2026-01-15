@@ -434,8 +434,17 @@
             try {
                 const stored = localStorage.getItem(POLL_INTERVAL_KEY);
                 if (stored) {
-                    pollInterval = parseInt(stored);
-                    document.getElementById('pollInterval').value = pollInterval;
+                    const storedValue = parseInt(stored);
+                    // Validate: must be one of the allowed values
+                    const allowedValues = [5000, 10000, 30000, 60000, 300000];
+                    if (allowedValues.includes(storedValue)) {
+                        pollInterval = storedValue;
+                        document.getElementById('pollInterval').value = pollInterval;
+                    } else {
+                        // Invalid value, reset to default
+                        console.warn('Invalid poll interval in storage, using default');
+                        pollInterval = 10000;
+                    }
                 }
             } catch (e) {
                 console.error('Error loading poll interval:', e);
@@ -444,7 +453,14 @@
 
         // Update poll interval
         function updatePollInterval() {
-            pollInterval = parseInt(document.getElementById('pollInterval').value);
+            const newValue = parseInt(document.getElementById('pollInterval').value);
+            // Validate: must be one of the allowed values
+            const allowedValues = [5000, 10000, 30000, 60000, 300000];
+            if (!allowedValues.includes(newValue)) {
+                console.error('Invalid poll interval selected');
+                return;
+            }
+            pollInterval = newValue;
             localStorage.setItem(POLL_INTERVAL_KEY, pollInterval);
             stopPolling();
             startPolling();
