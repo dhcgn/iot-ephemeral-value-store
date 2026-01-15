@@ -4,11 +4,11 @@ import (
 	"embed"
 	"flag"
 	"fmt"
+	"html/template"
 	"io/fs"
 	"log"
 	"net/http"
 	"os"
-	"text/template"
 	"time"
 
 	"github.com/dhcgn/iot-ephemeral-value-store/domain"
@@ -122,6 +122,14 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, stats *stats.Sta
 	if err != nil {
 		log.Fatal("Error parsing templates:", err)
 	}
+
+	downloadTmpl, err := template.ParseFS(staticFiles, "static/download.html")
+	if err != nil {
+		log.Fatal("Error parsing download template:", err)
+	}
+
+	// Set the download template in the config
+	hhc.DownloadTemplate = downloadTmpl
 
 	r := mux.NewRouter()
 

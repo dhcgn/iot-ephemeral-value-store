@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"html"
 	"net/http"
 	"net/url"
 	"strings"
@@ -140,54 +139,33 @@ func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
 
 	c.StatsInstance.IncrementDownloads()
 
-	// Generate HTML response with links
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	
-	// Escape the downloadKey for safe HTML output
-	escapedKey := html.EscapeString(downloadKey)
-	
-	// Start HTML
-	fmt.Fprintf(w, `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Download Options</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 40px; }
-        h1 { color: #333; }
-        ul { list-style-type: none; padding: 0; }
-        li { margin: 10px 0; }
-        a { color: #0066cc; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-        .section { margin: 20px 0; }
-    </style>
-</head>
-<body>
-    <h1>Download Options</h1>
-    <div class="section">
-        <h2>JSON Format</h2>
-        <ul>
-            <li><a href="/d/%s/json">/d/%s/json</a></li>
-        </ul>
-    </div>
-    <div class="section">
-        <h2>Plain Text Fields</h2>
-        <ul>
-`, escapedKey, escapedKey)
-
-	// Add links for each field in the JSON
-	for key := range paramMap {
-		// URL encode the key for use in href attribute
-		urlEncodedKey := url.PathEscape(key)
-		// HTML escape the key for display in text
-		escapedFieldKey := html.EscapeString(key)
-		fmt.Fprintf(w, `            <li><a href="/d/%s/plain/%s">/d/%s/plain/%s</a></li>
-`, escapedKey, urlEncodedKey, escapedKey, escapedFieldKey)
+	// Prepare data for template
+	type FieldData struct {
+		URLEncoded string
+		Name       string
 	}
 
-	// Close HTML
-	fmt.Fprintf(w, `        </ul>
-    </div>
-</body>
-</html>`)
+	var fields []FieldData
+	for key := range paramMap {
+		fields = append(fields, FieldData{
+			URLEncoded: url.PathEscape(key),
+			Name:       key, // Template will auto-escape for display
+		})
+	}
+
+	data := struct {
+		DownloadKey string
+		Fields      []FieldData
+	}{
+		DownloadKey: downloadKey, // Template will auto-escape
+		Fields:      fields,
+	}
+
+	// Render template
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := c.DownloadTemplate.Execute(w, data); err != nil {
+		c.StatsInstance.IncrementHTTPErrors()
+		http.Error(w, "Error rendering template", http.StatusInternalServerError)
+		return
+	}
 }

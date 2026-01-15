@@ -2,6 +2,7 @@ package httphandler
 
 import (
 	"encoding/base64"
+	"html/template"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,6 +12,39 @@ import (
 	"github.com/dhcgn/iot-ephemeral-value-store/storage"
 	"github.com/gorilla/mux"
 )
+
+// getTestDownloadTemplate returns a template for testing
+func getTestDownloadTemplate() *template.Template {
+	tmplStr := `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Download Options</title>
+</head>
+<body>
+    <h1>Download Options</h1>
+    <div class="section">
+        <h2>JSON Format</h2>
+        <ul>
+            <li><a href="/d/{{.DownloadKey}}/json">/d/{{.DownloadKey}}/json</a></li>
+        </ul>
+    </div>
+    <div class="section">
+        <h2>Plain Text Fields</h2>
+        <ul>
+            {{range .Fields}}
+            <li><a href="/d/{{$.DownloadKey}}/plain/{{.URLEncoded}}">/d/{{$.DownloadKey}}/plain/{{.Name}}</a></li>
+            {{end}}
+        </ul>
+    </div>
+</body>
+</html>`
+	tmpl, err := template.New("download").Parse(tmplStr)
+	if err != nil {
+		panic(err)
+	}
+	return tmpl
+}
 
 func Test_PlainDownloadHandler(t *testing.T) {
 	type args struct {
@@ -348,8 +382,9 @@ func Test_DownloadRootHandler(t *testing.T) {
 		{
 			name: "DownloadRootHandler - invalid download key",
 			c: Config{
-				StatsInstance:   stats.NewStats(),
-				StorageInstance: storage.NewInMemoryStorage(),
+				StatsInstance:    stats.NewStats(),
+				StorageInstance:  storage.NewInMemoryStorage(),
+				DownloadTemplate: getTestDownloadTemplate(),
 			},
 			args: args{
 				w: httptest.NewRecorder(),
@@ -376,6 +411,7 @@ func Test_DownloadRootHandler(t *testing.T) {
 					s.Store("validKey", data)
 					return s
 				}(),
+				DownloadTemplate: getTestDownloadTemplate(),
 			},
 			args: args{
 				w: httptest.NewRecorder(),
@@ -410,6 +446,7 @@ func Test_DownloadRootHandler(t *testing.T) {
 					s.Store("validKey", data)
 					return s
 				}(),
+				DownloadTemplate: getTestDownloadTemplate(),
 			},
 			args: args{
 				w: httptest.NewRecorder(),
@@ -445,6 +482,7 @@ func Test_DownloadRootHandler(t *testing.T) {
 					s.Store("validKey", data)
 					return s
 				}(),
+				DownloadTemplate: getTestDownloadTemplate(),
 			},
 			args: args{
 				w: httptest.NewRecorder(),
@@ -476,6 +514,7 @@ func Test_DownloadRootHandler(t *testing.T) {
 					s.StoreRawForTesting("validKey", []byte(`{"key": "value"`)) // Missing closing brace
 					return s
 				}(),
+				DownloadTemplate: getTestDownloadTemplate(),
 			},
 			args: args{
 				w: httptest.NewRecorder(),
