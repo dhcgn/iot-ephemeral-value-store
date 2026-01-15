@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"html"
 	"net/http"
 	"strings"
 
@@ -141,6 +142,9 @@ func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
 	// Generate HTML response with links
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	
+	// Escape the downloadKey for safe HTML output
+	escapedKey := html.EscapeString(downloadKey)
+	
 	// Start HTML
 	fmt.Fprintf(w, `<!DOCTYPE html>
 <html>
@@ -168,12 +172,13 @@ func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
     <div class="section">
         <h2>Plain Text Fields</h2>
         <ul>
-`, downloadKey, downloadKey)
+`, escapedKey, escapedKey)
 
 	// Add links for each field in the JSON
 	for key := range paramMap {
+		escapedFieldKey := html.EscapeString(key)
 		fmt.Fprintf(w, `            <li><a href="/d/%s/plain/%s">/d/%s/plain/%s</a></li>
-`, downloadKey, key, downloadKey, key)
+`, escapedKey, escapedFieldKey, escapedKey, escapedFieldKey)
 	}
 
 	// Close HTML

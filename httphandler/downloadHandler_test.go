@@ -433,6 +433,40 @@ func Test_DownloadRootHandler(t *testing.T) {
 			expectedDownloadCount:  1,
 		},
 		{
+			name: "DownloadRootHandler - HTML escaping for XSS prevention",
+			c: Config{
+				StatsInstance: stats.NewStats(),
+				StorageInstance: func() storage.Storage {
+					s := storage.NewInMemoryStorage()
+					data := map[string]interface{}{
+						"<script>alert('xss')</script>": "value",
+						"normal_field":                  "value",
+					}
+					s.Store("validKey", data)
+					return s
+				}(),
+			},
+			args: args{
+				w: httptest.NewRecorder(),
+				r: func() *http.Request {
+					req, _ := http.NewRequest("GET", "/d/validKey/", nil)
+					vars := map[string]string{
+						"downloadKey": "validKey",
+					}
+					return mux.SetURLVars(req, vars)
+				}(),
+			},
+			expectedStatus: http.StatusOK,
+			expectedBodyContains: []string{
+				"Download Options",
+				"/d/validKey/json",
+				"&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;", // Escaped HTML
+				"/d/validKey/plain/normal_field",
+			},
+			expectedHTTPErrorCount: 0,
+			expectedDownloadCount:  1,
+		},
+		{
 			name: "DownloadRootHandler - error decoding JSON",
 			c: Config{
 				StatsInstance: stats.NewStats(),
