@@ -114,3 +114,71 @@ func (c Config) DownloadJsonHandler(w http.ResponseWriter, r *http.Request) {
 func (c Config) DownloadBase64Handler(w http.ResponseWriter, r *http.Request) {
 	c.downloadPlainHandler(w, r, true)
 }
+
+// DownloadRootHandler handles requests to /d/{downloadKey}/ and returns an HTML page
+// with links to all available download endpoints
+func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	downloadKey := vars["downloadKey"]
+
+	jsonData, err := c.StorageInstance.GetJSON(downloadKey)
+	if err != nil {
+		c.StatsInstance.IncrementHTTPErrors()
+		http.Error(w, "Invalid download key or database error", http.StatusNotFound)
+		return
+	}
+
+	// Parse the JSON data to extract field names
+	paramMap := make(map[string]interface{})
+	if err := json.Unmarshal(jsonData, &paramMap); err != nil {
+		c.StatsInstance.IncrementHTTPErrors()
+		http.Error(w, "Error decoding JSON", http.StatusInternalServerError)
+		return
+	}
+
+	c.StatsInstance.IncrementDownloads()
+
+	// Generate HTML response with links
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	
+	// Start HTML
+	fmt.Fprintf(w, `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Download Options</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        h1 { color: #333; }
+        ul { list-style-type: none; padding: 0; }
+        li { margin: 10px 0; }
+        a { color: #0066cc; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .section { margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>Download Options</h1>
+    <div class="section">
+        <h2>JSON Format</h2>
+        <ul>
+            <li><a href="/d/%s/json">/d/%s/json</a></li>
+        </ul>
+    </div>
+    <div class="section">
+        <h2>Plain Text Fields</h2>
+        <ul>
+`, downloadKey, downloadKey)
+
+	// Add links for each field in the JSON
+	for key := range paramMap {
+		fmt.Fprintf(w, `            <li><a href="/d/%s/plain/%s">/d/%s/plain/%s</a></li>
+`, downloadKey, key, downloadKey, key)
+	}
+
+	// Close HTML
+	fmt.Fprintf(w, `        </ul>
+    </div>
+</body>
+</html>`)
+}

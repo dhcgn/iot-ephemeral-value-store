@@ -144,6 +144,8 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, stats *stats.Sta
 	r.HandleFunc("/d/{downloadKey}/json", hhc.DownloadJsonHandler).Methods("GET")
 	r.HandleFunc("/d/{downloadKey}/plain/{param:.*}", hhc.DownloadPlainHandler).Methods("GET")
 	r.HandleFunc("/d/{downloadKey}/plain-from-base64url/{param:.*}", hhc.DownloadBase64Handler).Methods("GET")
+	r.HandleFunc("/d/{downloadKey}/", hhc.DownloadRootHandler).Methods("GET")
+	r.HandleFunc("/d/{downloadKey}", hhc.DownloadRootHandler).Methods("GET")
 	// New routes with nestetd paths, eg. /u/1234/param1
 	r.HandleFunc("/patch/{uploadKey}", hhc.UploadAndPatchHandler).Methods("GET")
 	r.HandleFunc("/patch/{uploadKey}/{param:.*}", hhc.UploadAndPatchHandler).Methods("GET")
