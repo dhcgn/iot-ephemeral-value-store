@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -176,9 +177,12 @@ func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Add links for each field in the JSON
 	for key := range paramMap {
+		// URL encode the key for use in href attribute
+		urlEncodedKey := url.PathEscape(key)
+		// HTML escape the key for display in text
 		escapedFieldKey := html.EscapeString(key)
 		fmt.Fprintf(w, `            <li><a href="/d/%s/plain/%s">/d/%s/plain/%s</a></li>
-`, escapedKey, escapedFieldKey, escapedKey, escapedFieldKey)
+`, escapedKey, urlEncodedKey, escapedKey, escapedFieldKey)
 	}
 
 	// Close HTML
