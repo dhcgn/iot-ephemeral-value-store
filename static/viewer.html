@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IoT Value Viewer</title>
+    <title>IoT Ephemeral Value Store Viewer</title>
     <style>
         * {
             margin: 0;
@@ -170,12 +170,6 @@
             padding: 20px;
             margin-bottom: 15px;
             border-radius: 5px;
-            transition: all 0.3s;
-        }
-
-        .key-item:hover {
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            transform: translateX(5px);
         }
 
         .key-header {
@@ -191,6 +185,32 @@
             font-weight: 600;
             color: #667eea;
             font-size: 14px;
+        }
+
+        .key-name-container {
+            margin-bottom: 15px;
+        }
+
+        .key-name-input {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #667eea;
+            background: white;
+            transition: border-color 0.3s;
+        }
+
+        .key-name-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .key-name-input::placeholder {
+            color: #999;
+            font-weight: normal;
         }
 
         .key-value {
@@ -496,6 +516,7 @@
             watchedKeys.push({
                 downloadKey: downloadKey,
                 uploadKey: null,
+                name: '',
                 data: null,
                 lastUpdated: null,
                 status: 'pending',
@@ -532,6 +553,7 @@
                 watchedKeys.push({
                     downloadKey: downloadKey,
                     uploadKey: uploadKey,
+                    name: '',
                     data: null,
                     lastUpdated: null,
                     status: 'success',
@@ -560,6 +582,15 @@
             watchedKeys = watchedKeys.filter(k => k.downloadKey !== downloadKey);
             saveKeysToStorage();
             renderKeys();
+        }
+
+        // Update key name
+        function updateKeyName(downloadKey, newName) {
+            const keyObj = watchedKeys.find(k => k.downloadKey === downloadKey);
+            if (keyObj) {
+                keyObj.name = newName;
+                saveKeysToStorage();
+            }
         }
 
         // Fetch data for a specific key
@@ -678,6 +709,16 @@
 
             return `
                 <div class="key-item">
+                    <div class="key-name-container">
+                        <input 
+                            type="text" 
+                            class="key-name-input" 
+                            placeholder="Enter a name for this key (optional)" 
+                            value="${escapeHtml(key.name || '')}"
+                            onchange="updateKeyName('${key.downloadKey}', this.value)"
+                            onclick="event.stopPropagation()"
+                        />
+                    </div>
                     <div class="key-header">
                         <span class="status ${statusClass}">${statusText}</span>
                         <div class="key-actions">

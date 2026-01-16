@@ -88,6 +88,42 @@ The iot-ephemeral-value-store server includes a self-hosted info website that pr
 
 This self-hosted info website serves as a dashboard and quick-start guide, making it easier for users to understand and interact with the iot-ephemeral-value-store server.
 
+## Viewer - Real-Time Monitoring Tool
+
+The iot-ephemeral-value-store server includes a web-based **Viewer** tool at `/viewer` that enables real-time monitoring and debugging of IoT data. The Viewer makes the same HTTP requests from the browser, providing an intuitive interface to oversee all your keys and their data.
+
+### Features of the Viewer
+
+1. **Key Management**:
+   - Add download keys manually to your watch list
+   - Create new key pairs directly from the interface
+   - Assign custom names to each key for easy identification
+   - Remove keys from the watch list
+
+2. **Real-Time Monitoring**:
+   - Automatic periodic polling at configurable intervals (5s, 10s, 30s, 1min, 5min)
+   - Manual refresh option for individual keys
+   - Real-time status indicators (Data loaded, Error, Pending)
+   - View complete JSON data for each key
+
+3. **Data Persistence**:
+   - All watched keys are stored in your browser's localStorage
+   - Persist across browser sessions
+   - Export your watch list as JSON for backup or sharing
+   - Import previously exported watch lists
+
+4. **User Guidance**:
+   - Clear distinction between upload keys (for devices) and download keys (for viewing)
+   - Helpful tooltips and information boxes
+
+The Viewer is particularly useful for:
+- Debugging IoT device communications
+- Monitoring multiple sensors simultaneously
+- Quickly verifying data uploads
+- Managing and organizing multiple key pairs
+
+Access the Viewer by navigating to `/viewer` on your server (e.g., `http://127.0.0.1:8088/viewer`) or by clicking the "Open Viewer" button in the top right corner of the main page.
+
 ## Diagrams
 
 ### Simple

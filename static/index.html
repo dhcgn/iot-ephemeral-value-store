@@ -63,6 +63,28 @@
             border-radius: 4px;
         }
 
+        .viewer-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .viewer-button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(102, 126, 234, 0.3);
+            text-decoration: none;
+        }
+
         @media (max-width: 800px) {
             .container {
                 padding: 0 10px;
@@ -72,6 +94,7 @@
 </head>
 
 <body>
+    <a href="/viewer" class="viewer-button">🔍 Open Viewer</a>
     <h1>Welcome to the IoT Ephemeral Value Store Server</h1>
     <div class="container">
         <p>This service allows you to temporarily store and retrieve IoT data via HTTP. Below are some examples of how
