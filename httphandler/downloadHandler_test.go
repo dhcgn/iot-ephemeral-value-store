@@ -2,14 +2,49 @@ package httphandler
 
 import (
 	"encoding/base64"
+	"html/template"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/dhcgn/iot-ephemeral-value-store/stats"
 	"github.com/dhcgn/iot-ephemeral-value-store/storage"
 	"github.com/gorilla/mux"
 )
+
+// getTestDownloadTemplate returns a template for testing
+func getTestDownloadTemplate() *template.Template {
+	tmplStr := `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Download Options</title>
+</head>
+<body>
+    <h1>Download Options</h1>
+    <div class="section">
+        <h2>JSON Format</h2>
+        <ul>
+            <li><a href="/d/{{.DownloadKey}}/json">/d/{{.DownloadKey}}/json</a></li>
+        </ul>
+    </div>
+    <div class="section">
+        <h2>Plain Text Fields</h2>
+        <ul>
+            {{range .Fields}}
+            <li><a href="/d/{{$.DownloadKey}}/plain/{{.URLEncoded}}">/d/{{$.DownloadKey}}/plain/{{.Name}}</a></li>
+            {{end}}
+        </ul>
+    </div>
+</body>
+</html>`
+	tmpl, err := template.New("download").Parse(tmplStr)
+	if err != nil {
+		panic(err)
+	}
+	return tmpl
+}
 
 func Test_PlainDownloadHandler(t *testing.T) {
 	type args struct {
@@ -329,3 +364,245 @@ func Test_DownloadHandler(t *testing.T) {
 		})
 	}
 }
+
+func Test_DownloadRootHandler(t *testing.T) {
+	type args struct {
+		w http.ResponseWriter
+		r *http.Request
+	}
+	tests := []struct {
+		name                   string
+		c                      Config
+		args                   args
+		expectedStatus         int
+		expectedBodyContains   []string
+		expectedHTTPErrorCount int
+		expectedDownloadCount  int
+	}{
+		{
+			name: "DownloadRootHandler - invalid download key",
+			c: Config{
+				StatsInstance:    stats.NewStats(),
+				StorageInstance:  storage.NewInMemoryStorage(),
+				DownloadTemplate: getTestDownloadTemplate(),
+			},
+			args: args{
+				w: httptest.NewRecorder(),
+				r: func() *http.Request {
+					req, _ := http.NewRequest("GET", "/d/invalidDownloadKey/", nil)
+					vars := map[string]string{
+						"downloadKey": "invalidDownloadKey",
+					}
+					return mux.SetURLVars(req, vars)
+				}(),
+			},
+			expectedStatus:         http.StatusNotFound,
+			expectedBodyContains:   []string{"Invalid download key or database error"},
+			expectedHTTPErrorCount: 1,
+			expectedDownloadCount:  0,
+		},
+		{
+			name: "DownloadRootHandler - valid download key with single field",
+			c: Config{
+				StatsInstance: stats.NewStats(),
+				StorageInstance: func() storage.Storage {
+					s := storage.NewInMemoryStorage()
+					data := map[string]interface{}{"name": "value"}
+					s.Store("validKey", data)
+					return s
+				}(),
+				DownloadTemplate: getTestDownloadTemplate(),
+			},
+			args: args{
+				w: httptest.NewRecorder(),
+				r: func() *http.Request {
+					req, _ := http.NewRequest("GET", "/d/validKey/", nil)
+					vars := map[string]string{
+						"downloadKey": "validKey",
+					}
+					return mux.SetURLVars(req, vars)
+				}(),
+			},
+			expectedStatus: http.StatusOK,
+			expectedBodyContains: []string{
+				"Download Options",
+				"/d/validKey/json",
+				"/d/validKey/plain/name",
+			},
+			expectedHTTPErrorCount: 0,
+			expectedDownloadCount:  1,
+		},
+		{
+			name: "DownloadRootHandler - valid download key with multiple fields",
+			c: Config{
+				StatsInstance: stats.NewStats(),
+				StorageInstance: func() storage.Storage {
+					s := storage.NewInMemoryStorage()
+					data := map[string]interface{}{
+						"name":   "value",
+						"temp":   "25",
+						"status": "ok",
+					}
+					s.Store("validKey", data)
+					return s
+				}(),
+				DownloadTemplate: getTestDownloadTemplate(),
+			},
+			args: args{
+				w: httptest.NewRecorder(),
+				r: func() *http.Request {
+					req, _ := http.NewRequest("GET", "/d/validKey/", nil)
+					vars := map[string]string{
+						"downloadKey": "validKey",
+					}
+					return mux.SetURLVars(req, vars)
+				}(),
+			},
+			expectedStatus: http.StatusOK,
+			expectedBodyContains: []string{
+				"Download Options",
+				"/d/validKey/json",
+				"/d/validKey/plain/name",
+				"/d/validKey/plain/temp",
+				"/d/validKey/plain/status",
+			},
+			expectedHTTPErrorCount: 0,
+			expectedDownloadCount:  1,
+		},
+		{
+			name: "DownloadRootHandler - HTML escaping for XSS prevention",
+			c: Config{
+				StatsInstance: stats.NewStats(),
+				StorageInstance: func() storage.Storage {
+					s := storage.NewInMemoryStorage()
+					data := map[string]interface{}{
+						"<script>alert('xss')</script>": "value",
+						"normal_field":                  "value",
+					}
+					s.Store("validKey", data)
+					return s
+				}(),
+				DownloadTemplate: getTestDownloadTemplate(),
+			},
+			args: args{
+				w: httptest.NewRecorder(),
+				r: func() *http.Request {
+					req, _ := http.NewRequest("GET", "/d/validKey/", nil)
+					vars := map[string]string{
+						"downloadKey": "validKey",
+					}
+					return mux.SetURLVars(req, vars)
+				}(),
+			},
+			expectedStatus: http.StatusOK,
+			expectedBodyContains: []string{
+				"Download Options",
+				"/d/validKey/json",
+				"&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;", // Escaped HTML
+				"/d/validKey/plain/normal_field",
+			},
+			expectedHTTPErrorCount: 0,
+			expectedDownloadCount:  1,
+		},
+		{
+			name: "DownloadRootHandler - nested fields",
+			c: Config{
+				StatsInstance: stats.NewStats(),
+				StorageInstance: func() storage.Storage {
+					s := storage.NewInMemoryStorage()
+					data := map[string]interface{}{
+						"folder_1": map[string]interface{}{
+							"folder_2": map[string]interface{}{
+								"name1":     "value",
+								"timestamp": "2026-01-16T10:51:07Z",
+							},
+						},
+						"name":            "value",
+						"name1":           "value",
+						"name1_timestamp": "2026-01-16T10:49:40Z",
+						"name_timestamp":  "2026-01-16T10:49:37Z",
+						"timestamp":       "2026-01-16T10:51:07Z",
+					}
+					s.Store("validKey", data)
+					return s
+				}(),
+				DownloadTemplate: getTestDownloadTemplate(),
+			},
+			args: args{
+				w: httptest.NewRecorder(),
+				r: func() *http.Request {
+					req, _ := http.NewRequest("GET", "/d/validKey/", nil)
+					vars := map[string]string{
+						"downloadKey": "validKey",
+					}
+					return mux.SetURLVars(req, vars)
+				}(),
+			},
+			expectedStatus: http.StatusOK,
+			expectedBodyContains: []string{
+				"Download Options",
+				"/d/validKey/json",
+				"/d/validKey/plain/folder_1/folder_2/name1",
+				"/d/validKey/plain/folder_1/folder_2/timestamp",
+				"/d/validKey/plain/name",
+				"/d/validKey/plain/name1",
+			},
+			expectedHTTPErrorCount: 0,
+			expectedDownloadCount:  1,
+		},
+		{
+			name: "DownloadRootHandler - error decoding JSON",
+			c: Config{
+				StatsInstance: stats.NewStats(),
+				StorageInstance: func() storage.Storage {
+					s := storage.NewInMemoryStorage()
+					// Store invalid JSON data
+					s.StoreRawForTesting("validKey", []byte(`{"key": "value"`)) // Missing closing brace
+					return s
+				}(),
+				DownloadTemplate: getTestDownloadTemplate(),
+			},
+			args: args{
+				w: httptest.NewRecorder(),
+				r: func() *http.Request {
+					req, _ := http.NewRequest("GET", "/d/validKey/", nil)
+					vars := map[string]string{
+						"downloadKey": "validKey",
+					}
+					return mux.SetURLVars(req, vars)
+				}(),
+			},
+			expectedStatus:         http.StatusInternalServerError,
+			expectedBodyContains:   []string{"Error decoding JSON"},
+			expectedHTTPErrorCount: 1,
+			expectedDownloadCount:  0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.c.DownloadRootHandler(tt.args.w, tt.args.r)
+
+			resp := tt.args.w.(*httptest.ResponseRecorder)
+			if resp.Code != tt.expectedStatus {
+				t.Errorf("DownloadRootHandler returned wrong status code: got \"%v\" want \"%v\"", resp.Code, tt.expectedStatus)
+			}
+
+			body := resp.Body.String()
+			for _, expected := range tt.expectedBodyContains {
+				if !strings.Contains(body, expected) {
+					t.Errorf("DownloadRootHandler body does not contain expected string: want \"%v\" in \"%v\"", expected, body)
+				}
+			}
+
+			if tt.c.StatsInstance.GetCurrentStats().HTTPErrorCount != tt.expectedHTTPErrorCount {
+				t.Errorf("DownloadRootHandler did not increment HTTPErrorCount correctly: got \"%v\" want \"%v\"", tt.c.StatsInstance.GetCurrentStats().HTTPErrorCount, tt.expectedHTTPErrorCount)
+			}
+
+			if tt.c.StatsInstance.GetCurrentStats().DownloadCount != tt.expectedDownloadCount {
+				t.Errorf("DownloadRootHandler did not increment DownloadCount correctly: got \"%v\" want \"%v\"", tt.c.StatsInstance.GetCurrentStats().DownloadCount, tt.expectedDownloadCount)
+			}
+		})
+	}
+}
+

@@ -4,11 +4,11 @@ import (
 	"embed"
 	"flag"
 	"fmt"
+	"html/template"
 	"io/fs"
 	"log"
 	"net/http"
 	"os"
-	"text/template"
 	"time"
 
 	"github.com/dhcgn/iot-ephemeral-value-store/domain"
@@ -123,6 +123,14 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, stats *stats.Sta
 		log.Fatal("Error parsing templates:", err)
 	}
 
+	downloadTmpl, err := template.ParseFS(staticFiles, "static/download.html")
+	if err != nil {
+		log.Fatal("Error parsing download template:", err)
+	}
+
+	// Set the download template in the config
+	hhc.DownloadTemplate = downloadTmpl
+
 	r := mux.NewRouter()
 
 	r.Use(mc.EnableCORS)
@@ -144,7 +152,9 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, stats *stats.Sta
 	r.HandleFunc("/d/{downloadKey}/json", hhc.DownloadJsonHandler).Methods("GET")
 	r.HandleFunc("/d/{downloadKey}/plain/{param:.*}", hhc.DownloadPlainHandler).Methods("GET")
 	r.HandleFunc("/d/{downloadKey}/plain-from-base64url/{param:.*}", hhc.DownloadBase64Handler).Methods("GET")
-	// New routes with nestetd paths, eg. /u/1234/param1
+	r.HandleFunc("/d/{downloadKey}/", hhc.DownloadRootHandler).Methods("GET")
+	r.HandleFunc("/d/{downloadKey}", hhc.DownloadRootHandler).Methods("GET")
+	// New routes with nested paths, eg. /u/1234/param1
 	r.HandleFunc("/patch/{uploadKey}", hhc.UploadAndPatchHandler).Methods("GET")
 	r.HandleFunc("/patch/{uploadKey}/{param:.*}", hhc.UploadAndPatchHandler).Methods("GET")
 

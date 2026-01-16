@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"sort"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -113,4 +115,100 @@ func (c Config) DownloadJsonHandler(w http.ResponseWriter, r *http.Request) {
 
 func (c Config) DownloadBase64Handler(w http.ResponseWriter, r *http.Request) {
 	c.downloadPlainHandler(w, r, true)
+}
+
+// DownloadRootHandler handles requests to /d/{downloadKey}/ and returns an HTML page
+// with links to all available download endpoints
+func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	downloadKey := vars["downloadKey"]
+
+	jsonData, err := c.StorageInstance.GetJSON(downloadKey)
+	if err != nil {
+		c.StatsInstance.IncrementHTTPErrors()
+		http.Error(w, "Invalid download key or database error", http.StatusNotFound)
+		return
+	}
+
+	// Parse the JSON data to extract field names
+	paramMap := make(map[string]interface{})
+	if err := json.Unmarshal(jsonData, &paramMap); err != nil {
+		c.StatsInstance.IncrementHTTPErrors()
+		http.Error(w, "Error decoding JSON", http.StatusInternalServerError)
+		return
+	}
+
+	c.StatsInstance.IncrementDownloads()
+
+	// Prepare data for template
+	type FieldData struct {
+		URLEncoded string
+		Name       string
+	}
+
+	// Collect all paths (including nested ones)
+	paths := collectAllPaths(paramMap, "")
+	
+	// Sort paths alphabetically for consistent ordering
+	sort.Strings(paths)
+	
+	var fields []FieldData
+	if len(paths) > 0 {
+		fields = make([]FieldData, 0, len(paths))
+	}
+	for _, path := range paths {
+		fields = append(fields, FieldData{
+			URLEncoded: url.PathEscape(path),
+			Name:       path, // Template will auto-escape for display
+		})
+	}
+
+	data := struct {
+		DownloadKey string
+		Fields      []FieldData
+	}{
+		DownloadKey: downloadKey, // Template will auto-escape
+		Fields:      fields,
+	}
+
+	// Render template
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := c.DownloadTemplate.Execute(w, data); err != nil {
+		c.StatsInstance.IncrementHTTPErrors()
+		http.Error(w, "Error rendering template", http.StatusInternalServerError)
+		return
+	}
+}
+
+// collectAllPaths recursively collects all paths in a nested map structure.
+// The data parameter should be a map[string]interface{} representing the JSON structure.
+// The prefix parameter should be an empty string ("") for root-level calls; it will be
+// built up recursively as the function traverses nested maps.
+// Returns a slice of path strings in the format "key" or "parent/child" for nested values.
+func collectAllPaths(data interface{}, prefix string) []string {
+	var paths []string
+	
+	switch v := data.(type) {
+	case map[string]interface{}:
+		for key, value := range v {
+			var currentPath string
+			if prefix == "" {
+				currentPath = key
+			} else {
+				currentPath = prefix + "/" + key
+			}
+			
+			// Check if the value is a nested map or a leaf value
+			if nestedMap, ok := value.(map[string]interface{}); ok {
+				// Recursively collect paths from nested maps
+				nestedPaths := collectAllPaths(nestedMap, currentPath)
+				paths = append(paths, nestedPaths...)
+			} else {
+				// This is a leaf value, add the path
+				paths = append(paths, currentPath)
+			}
+		}
+	}
+	
+	return paths
 }
