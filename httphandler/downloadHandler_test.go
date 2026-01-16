@@ -505,6 +505,52 @@ func Test_DownloadRootHandler(t *testing.T) {
 			expectedDownloadCount:  1,
 		},
 		{
+			name: "DownloadRootHandler - nested fields",
+			c: Config{
+				StatsInstance: stats.NewStats(),
+				StorageInstance: func() storage.Storage {
+					s := storage.NewInMemoryStorage()
+					data := map[string]interface{}{
+						"folder_1": map[string]interface{}{
+							"folder_2": map[string]interface{}{
+								"name1":     "value",
+								"timestamp": "2026-01-16T10:51:07Z",
+							},
+						},
+						"name":            "value",
+						"name1":           "value",
+						"name1_timestamp": "2026-01-16T10:49:40Z",
+						"name_timestamp":  "2026-01-16T10:49:37Z",
+						"timestamp":       "2026-01-16T10:51:07Z",
+					}
+					s.Store("validKey", data)
+					return s
+				}(),
+				DownloadTemplate: getTestDownloadTemplate(),
+			},
+			args: args{
+				w: httptest.NewRecorder(),
+				r: func() *http.Request {
+					req, _ := http.NewRequest("GET", "/d/validKey/", nil)
+					vars := map[string]string{
+						"downloadKey": "validKey",
+					}
+					return mux.SetURLVars(req, vars)
+				}(),
+			},
+			expectedStatus: http.StatusOK,
+			expectedBodyContains: []string{
+				"Download Options",
+				"/d/validKey/json",
+				"/d/validKey/plain/folder_1/folder_2/name1",
+				"/d/validKey/plain/folder_1/folder_2/timestamp",
+				"/d/validKey/plain/name",
+				"/d/validKey/plain/name1",
+			},
+			expectedHTTPErrorCount: 0,
+			expectedDownloadCount:  1,
+		},
+		{
 			name: "DownloadRootHandler - error decoding JSON",
 			c: Config{
 				StatsInstance: stats.NewStats(),

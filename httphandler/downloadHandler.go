@@ -145,14 +145,16 @@ func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
 		Name       string
 	}
 
+	// Collect all paths (including nested ones)
 	var fields []FieldData
-	if len(paramMap) > 0 {
-		fields = make([]FieldData, 0, len(paramMap))
+	paths := collectAllPaths(paramMap, "")
+	if len(paths) > 0 {
+		fields = make([]FieldData, 0, len(paths))
 	}
-	for key := range paramMap {
+	for _, path := range paths {
 		fields = append(fields, FieldData{
-			URLEncoded: url.PathEscape(key),
-			Name:       key, // Template will auto-escape for display
+			URLEncoded: url.PathEscape(path),
+			Name:       path, // Template will auto-escape for display
 		})
 	}
 
@@ -171,4 +173,33 @@ func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 		return
 	}
+}
+
+// collectAllPaths recursively collects all paths in a nested map structure
+func collectAllPaths(data interface{}, prefix string) []string {
+	var paths []string
+	
+	switch v := data.(type) {
+	case map[string]interface{}:
+		for key, value := range v {
+			var currentPath string
+			if prefix == "" {
+				currentPath = key
+			} else {
+				currentPath = prefix + "/" + key
+			}
+			
+			// Check if the value is a nested map or a leaf value
+			if nestedMap, ok := value.(map[string]interface{}); ok {
+				// Recursively collect paths from nested maps
+				nestedPaths := collectAllPaths(nestedMap, currentPath)
+				paths = append(paths, nestedPaths...)
+			} else {
+				// This is a leaf value, add the path
+				paths = append(paths, currentPath)
+			}
+		}
+	}
+	
+	return paths
 }
