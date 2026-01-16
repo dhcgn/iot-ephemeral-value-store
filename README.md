@@ -204,6 +204,27 @@ curl http://127.0.0.1:8080/62fb66ee6841600228945ef592c8998e097c51271f9acf1f15e72
 12
 ```
 
+#### Download-Root Page
+
+The Download-Root Page provides a human-readable HTML page listing all available download links for a given download key. This makes it easy to discover and access all stored fields, including nested structures.
+
+```bash
+# Access the download-root page in a browser or via curl
+curl http://127.0.0.1:8080/d/62fb66ee6841600228945ef592c8998e097c51271f9acf1f15e72363451a7910/
+```
+
+The page displays:
+- A link to download all data in JSON format
+- Individual links for each field to download as plain text
+- Support for nested fields (e.g., `/d/{key}/plain/folder_1/folder_2/field`)
+- Fields are listed in alphabetical order for consistent navigation
+
+This feature is particularly useful for:
+- Discovering what data is available without needing to know field names in advance
+- Testing and debugging IoT data uploads
+- Providing a simple web interface for data access
+- Integration tools that need to enumerate available fields
+
 #### Delete Value
 
 ```bash

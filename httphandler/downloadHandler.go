@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -146,8 +147,12 @@ func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Collect all paths (including nested ones)
-	var fields []FieldData
 	paths := collectAllPaths(paramMap, "")
+	
+	// Sort paths alphabetically for consistent ordering
+	sort.Strings(paths)
+	
+	var fields []FieldData
 	if len(paths) > 0 {
 		fields = make([]FieldData, 0, len(paths))
 	}
