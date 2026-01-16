@@ -584,12 +584,42 @@
             renderKeys();
         }
 
+        // Helper to get downloadKey from element
+        function getDownloadKeyFromElement(element) {
+            const keyItem = element.closest('.key-item');
+            return keyItem ? keyItem.getAttribute('data-download-key') : null;
+        }
+
+        // Update key name (wrapper for DOM event)
+        function updateKeyNameFromElement(element) {
+            const downloadKey = getDownloadKeyFromElement(element);
+            if (downloadKey) {
+                updateKeyName(downloadKey, element.value);
+            }
+        }
+
         // Update key name
         function updateKeyName(downloadKey, newName) {
             const keyObj = watchedKeys.find(k => k.downloadKey === downloadKey);
             if (keyObj) {
                 keyObj.name = newName;
                 saveKeysToStorage();
+            }
+        }
+
+        // Fetch key data (wrapper for DOM event)
+        function fetchKeyDataFromElement(element) {
+            const downloadKey = getDownloadKeyFromElement(element);
+            if (downloadKey) {
+                fetchKeyData(downloadKey);
+            }
+        }
+
+        // Remove key (wrapper for DOM event)
+        function removeKeyFromElement(element) {
+            const downloadKey = getDownloadKeyFromElement(element);
+            if (downloadKey) {
+                removeKey(downloadKey);
             }
         }
 
@@ -708,24 +738,24 @@
             }
 
             return `
-                <div class="key-item">
+                <div class="key-item" data-download-key="${escapeHtml(key.downloadKey)}">
                     <div class="key-name-container">
                         <input 
                             type="text" 
                             class="key-name-input" 
                             placeholder="Enter a name for this key (optional)" 
                             value="${escapeHtml(key.name || '')}"
-                            onchange="updateKeyName('${key.downloadKey}', this.value)"
+                            onchange="updateKeyNameFromElement(this)"
                             onclick="event.stopPropagation()"
                         />
                     </div>
                     <div class="key-header">
                         <span class="status ${statusClass}">${statusText}</span>
                         <div class="key-actions">
-                            <button class="btn btn-primary btn-small" onclick="fetchKeyData('${key.downloadKey}')">
+                            <button class="btn btn-primary btn-small" onclick="fetchKeyDataFromElement(this)">
                                 🔄 Refresh
                             </button>
-                            <button class="btn btn-danger btn-small" onclick="removeKey('${key.downloadKey}')">
+                            <button class="btn btn-danger btn-small" onclick="removeKeyFromElement(this)">
                                 🗑️ Remove
                             </button>
                         </div>
