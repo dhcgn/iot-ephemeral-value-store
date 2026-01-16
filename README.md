@@ -4,482 +4,214 @@
 
 # iot-ephemeral-value-store
 
-This project provides a simple HTTP server that offers ephemeral storage for IoT data. It generates unique key pairs for data upload and retrieval, stores data temporarily based on a configurable duration, and allows data to be fetched in both JSON and plain text formats. The key pairs ensure that you can securely share the download key, but only you can upload data using the upload key.
+A lightweight HTTP server for temporary IoT data storage. Upload sensor data with simple HTTP GET requests, retrieve it as JSON or plain text, and let it expire automatically. Perfect for IoT devices that can only make basic HTTP calls.
 
-## Features
+## What is this?
 
-- **Key Pair Generation**: Generate unique upload and download keys for secure data handling.
-- **Data Upload**: Upload data with a simple GET request using the generated upload key.
-- **Data Retrieval**: Retrieve stored data using the download key, either as JSON, plain text, or base64 encoded for specific data fields.
-- **Patch Feature**: Combine different uploads into a single JSON structure, which can be downloaded with one call. Use one upload key for multiple values.
-- **Privacy**: Separate keys for upload and download to ensure secure and private data handling.
-- **Base64 Decoding**: Server-side base64 decoding for easy usage.
-- **Simple HTTP GET**: All operations are done using HTTP GET requests, making it compatible with very simple IoT technology.
+This server provides ephemeral (temporary) storage for IoT sensor data with a simple key-based system:
+- **Upload data**: IoT devices use an upload key to send data via GET requests
+- **Download data**: Applications use a separate download key to retrieve data
+- **Automatic expiration**: Data is automatically deleted after a configurable period
+- **No complex authentication**: Just keys - simple enough for any IoT device
 
-## Why?
+The separation of upload and download keys means you can safely share read-only access to your data without exposing write capabilities.
 
-- Upload sensor data from IoT devices without the need for complex authentication. 
-- IoT must only be able to make a simple HTTP GET request.
-- Retrieve data using a simple key-based system with HTTP GET requests.
-- Data can be reviewed as JSON or plain text.
-- Data is stored for a configurable duration before being deleted.
-- The server can be run on a local network or in the cloud.
+## Key Features
 
-### Quick Start
+- **Simple HTTP GET**: All operations work with GET requests - compatible with simple IoT devices
+- **Key Pair System**: Separate upload (write) and download (read) keys for security
+- **JSON & Plain Text**: Download data in JSON format or as individual plain text values
+- **Patch Feature**: Combine multiple uploads into nested JSON structures
+- **Auto Expiration**: Data automatically deleted after configured duration (e.g., 24h)
+- **Web Viewer**: Built-in web interface to monitor keys in real-time
+- **No Database Setup**: Embedded BadgerDB - just run the binary
 
-**Upload Data**
+## Quick Start Example
 
-In this example we use the patch feature and upload multiple values to the same key but different paths.
-
+**1. Create a key pair:**
 ```bash
-curl https://iot.hdev.io/patch/abb0c54ca2b3dbecc3c781f2de6d0e1c62c6cd8a59c82932ac68c746416d8134/?name1=value
-curl https://iot.hdev.io/patch/abb0c54ca2b3dbecc3c781f2de6d0e1c62c6cd8a59c82932ac68c746416d8134/location_1/?name=value
-curl https://iot.hdev.io/patch/abb0c54ca2b3dbecc3c781f2de6d0e1c62c6cd8a59c82932ac68c746416d8134/location_2/?name=value
+curl https://iot.hdev.io/kp
 ```
-
-**Download Data**
-
-```bash
-curl https://iot.hdev.io/d/233e9c1fdb3cc310e487dc35313740d68b2078f58c1395ac95c599dbfeb51ee7/json
-```
-
 ```json
 {
-  "location_1": {
-    "name": "value",
-    "timestamp": "2024-12-29T18:51:07Z"
-  },
-  "location_2": {
-    "name": "value",
-    "timestamp": "2024-12-29T18:51:06Z"
-  },
-  "name1": "value",
-  "name1_timestamp": "2024-12-29T18:51:08Z",
+  "upload-key": "abb0c54c...",
+  "download-key": "233e9c1f..."
+}
+```
+
+**2. Upload data (from IoT device):**
+```bash
+curl "https://iot.hdev.io/u/abb0c54c.../?tempC=23.5&humidity=45"
+```
+
+**3. Download data (from application):**
+```bash
+curl https://iot.hdev.io/d/233e9c1f.../json
+```
+```json
+{
+  "tempC": "23.5",
+  "humidity": "45",
   "timestamp": "2024-12-29T18:51:08Z"
 }
 ```
 
-## Self-Hosted Info Website
+**Try it now!** A test installation is available at **[iot.hdev.io](https://iot.hdev.io)** for evaluation and fair use.
 
-The iot-ephemeral-value-store server includes a self-hosted info website that provides valuable information about the server's status, usage, and API. This website is automatically available when you run the server and can be accessed at the root URL (e.g., `http://127.0.0.1:8088/`).
+## Use Cases
 
-### Features of the Info Website
-
-1. **Getting Started Guide**: Provides example URLs for uploading, downloading, and deleting data, customized with a generated key pair for immediate use.
-
-2. **Server Settings**: Displays important server configuration information, including:
-   - Software Version
-   - Software Build Time
-   - Data Retention Period
-
-3. **Server Stats**: Shows real-time statistics about server usage:
-   - Server Uptime
-   - Download/Upload Counts (since start and last 24 hours)
-   - HTTP Error Counts
-   - Rate Limit Hit Count
-
-4. **Rate Limit Stats**: Provides information about rate limiting, if applicable.
-
-5. **API Usage Guide**: Offers a quick reference for using the server's API, including:
-   - Creating Key Pairs
-   - Uploading Data
-   - Downloading Data (JSON and Plain Text)
-   - Advanced Patch Usage
-
-This self-hosted info website serves as a dashboard and quick-start guide, making it easier for users to understand and interact with the iot-ephemeral-value-store server.
-
-## Viewer - Real-Time Monitoring Tool
-
-The iot-ephemeral-value-store server includes a web-based **Viewer** tool at `/viewer` that enables real-time monitoring and debugging of IoT data. The Viewer makes the same HTTP requests from the browser, providing an intuitive interface to oversee all your keys and their data.
-
-### Features of the Viewer
-
-1. **Key Management**:
-   - Add download keys manually to your watch list
-   - Create new key pairs directly from the interface
-   - Assign custom names to each key for easy identification
-   - Remove keys from the watch list
-
-2. **Real-Time Monitoring**:
-   - Automatic periodic polling at configurable intervals (5s, 10s, 30s, 1min, 5min)
-   - Manual refresh option for individual keys
-   - Real-time status indicators (Data loaded, Error, Pending)
-   - View complete JSON data for each key
-
-3. **Data Persistence**:
-   - All watched keys are stored in your browser's localStorage
-   - Persist across browser sessions
-   - Export your watch list as JSON for backup or sharing
-   - Import previously exported watch lists
-
-4. **User Guidance**:
-   - Clear distinction between upload keys (for devices) and download keys (for viewing)
-   - Helpful tooltips and information boxes
-
-The Viewer is particularly useful for:
-- Debugging IoT device communications
-- Monitoring multiple sensors simultaneously
-- Quickly verifying data uploads
-- Managing and organizing multiple key pairs
-
-Access the Viewer by navigating to `/viewer` on your server (e.g., `http://127.0.0.1:8088/viewer`) or by clicking the "Open Viewer" button in the top right corner of the main page.
-
-## Diagrams
-
-### Simple
-
-```mermaid
-sequenceDiagram
-    participant IoT Device 1
-    participant IoT Device 2
-    participant HTTP Server
-    IoT Device 1->>HTTP Server: GET /kp (Create Key Pair)
-    HTTP Server-->>IoT Device 1: { "upload-key": "key1", "download-key": "dkey1" }
-    IoT Device 1->>HTTP Server: GET /u/key1?tempC=12 (Upload Data)
-    HTTP Server-->>IoT Device 1: { "message": "Data uploaded successfully" }
-    IoT Device 2->>HTTP Server: GET /kp (Create Key Pair)
-    HTTP Server-->>IoT Device 2: { "upload-key": "key2", "download-key": "dkey2" }
-    IoT Device 2->>HTTP Server: GET /u/key2?humidity=45 (Upload Data)
-    HTTP Server-->>IoT Device 2: { "message": "Data uploaded successfully" }
-```    
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Web Browser
-    participant HTTP Server
-    Web Browser->>HTTP Server: GET /d/dkey1/json (Retrieve Data)
-    HTTP Server-->>Web Browser: { "tempC": "12", "timestamp": "2024-06-15T10:37:28Z" }
-    Web Browser->>User: Display Data    
-```
-
-### Patch
-
-```mermaid
-sequenceDiagram
-    participant IoT Device
-    participant HTTP Server
-
-    IoT Device->>HTTP Server: GET /kp (Create Key Pair)
-    HTTP Server-->>IoT Device: { "upload-key": "key1", "download-key": "dkey1" }
-    
-    Note right of IoT Device: Initial Patch to Root
-    IoT Device->>HTTP Server: GET /patch/key1/?temp=23&hum=43
-    HTTP Server-->>IoT Device: { "message": "Data uploaded successfully", "download_url": "http://127.0.0.1:8080/d/dkey1/json" }
-
-    Note right of IoT Device: Nested Patch
-    IoT Device->>HTTP Server: GET /patch/key1/house_1/?temp=30&hum=50
-    HTTP Server-->>IoT Device: { "message": "Data uploaded successfully", "download_url": "http://127.0.0.1:8080/d/dkey1/json" }
-
-    Note right of IoT Device: Deeply Nested Patch
-    IoT Device->>HTTP Server: GET /patch/key1/house_2/basement/kitchen/?temp=31&hum=49
-    HTTP Server-->>IoT Device: { "message": "Data uploaded successfully", "download_url": "http://127.0.0.1:8080/d/dkey1/json" }
-
-    Note left of HTTP Server: Data Structure Updated
-    HTTP Server-->>HTTP Server: Data structure updated with new values
-```
-
-## HTTP Calls
-
-### Simple Curl Examples
-
-#### Create Key Pair
-
-> The use of `jq` is optional, but it makes the output more readable.	
-
+### Shelly Devices
+Shelly smart home devices can make HTTP GET requests. Upload sensor data from Shellys without complex integrations:
 ```bash
-# Create a key pair
-curl -s https://your-server.com/kp | jq
+# Configure in Shelly: Actions → Webhook
+https://iot.hdev.io/u/YOUR_UPLOAD_KEY/?temp={{temperature}}&power={{power}}
 ```
 
-```json
-{
-  "download-key": "62fb66ee6841600228945ef592c8998e097c51271f9acf1f15e72363451a7910",
-  "upload-key": "1e1c7e5f220d2eee5ebbfd1428b84aaf1570ca4f88105a81feac901850b20a77"
-}
+### Home Assistant
+Upload sensor data from Home Assistant to share with external applications or mobile apps:
+```yaml
+rest_command:
+  upload_sensor:
+    url: "https://iot.hdev.io/u/{{ key }}/?value={{ value }}"
+```
+See **[README.HomeAssistant.md](README.HomeAssistant.md)** for complete integration guide.
+
+### ESP32/ESP8266 Devices
+Any device that can make HTTP GET requests:
+```cpp
+// ESP32/ESP8266 example
+String url = "https://iot.hdev.io/u/YOUR_KEY/?temp=" + String(temp);
+http.begin(url);
+http.GET();
 ```
 
-#### Upload Value
+### Custom IoT Solutions
+- DIY sensor networks
+- Remote monitoring systems
+- Data bridges between systems
+- Temporary data exchange between services
 
+## Installation
+
+### Docker (Recommended)
+
+**Basic usage:**
 ```bash
-# Upload a value
-curl -s https://your-server.com/u/1e1c7e5f220d2eee5ebbfd1428b84aaf1570ca4f88105a81feac901850b20a77?tempC=12 | jq
+docker run -p 8080:8080 dhcgn/iot-ephemeral-value-store-server
 ```
 
-```json
-{
-  "download_url": "http://127.0.0.1:8080/62fb66ee6841600228945ef592c8998e097c51271f9acf1f15e72363451a7910/json",
-  "message": "Data uploaded successfully",
-  "parameter_urls": {
-    "tempC": "http://127.0.0.1:8080/62fb66ee6841600228945ef592c8998e097c51271f9acf1f15e72363451a7910/plain/tempC"
-  }
-}
-```
-
-
-#### Download Value
-
+**With persistent storage and custom retention:**
 ```bash
-# Download the value as json
-curl http://127.0.0.1:8080/62fb66ee6841600228945ef592c8998e097c51271f9acf1f15e72363451a7910/json | jq
+docker run -p 8080:8080 \
+  -v /path/to/data:/data \
+  dhcgn/iot-ephemeral-value-store-server \
+  -persist-values-for 48h -store /data
 ```
 
-```json
-{
-  "tempC": "12",
-  "timestamp": "2024-06-15T10:37:28Z"
-}
-```
-
-```bash
-# Download the value as plain text
-curl http://127.0.0.1:8080/62fb66ee6841600228945ef592c8998e097c51271f9acf1f15e72363451a7910/plain/tempC
-```
-
-```plain
-12
-```
-
-#### Download-Root Page
-
-The Download-Root Page provides a human-readable HTML page listing all available download links for a given download key. This makes it easy to discover and access all stored fields, including nested structures.
-
-```bash
-# Access the download-root page in a browser or via curl
-curl http://127.0.0.1:8080/d/62fb66ee6841600228945ef592c8998e097c51271f9acf1f15e72363451a7910/
-```
-
-The page displays:
-- A link to download all data in JSON format
-- Individual links for each field to download as plain text
-- Support for nested fields (e.g., `/d/{key}/plain/folder_1/folder_2/field`)
-- Fields are listed in alphabetical order for consistent navigation
-
-This feature is particularly useful for:
-- Discovering what data is available without needing to know field names in advance
-- Testing and debugging IoT data uploads
-- Providing a simple web interface for data access
-- Integration tools that need to enumerate available fields
-
-#### Delete Value
-
-```bash
-# delete everything with this upload key
-curl -s https://your-server.com/delete/1e1c7e5f220d2eee5ebbfd1428b84aaf1570ca4f88105a81feac901850b20a77
-```
-
-```plain
-OK
-```
-
-### Create Key Pair
-
-The upload key is just random data with a length of 256bit encoded in hex, the download key is derived a each upload time. The download key is just a hashed upload key with sha256.
-
-#### Web
-
-```http
-GET https://your-server.com/kp
-
-200 OK
-{
-  "upload-key": "1326a51edc413...",
-  "download-key": "4698f8edcc24..."
-}
-```
-
-#### Script
-
-```bash
-# Create a upload key and and a download key
-uuidgen | sha256sum | (read sha _; echo $sha; echo -n $sha | sha256sum | cut -d " " -f1)
-
-# e.g.
-# 1326a51edc413cbd5cb09961e6fc655b8e30aca8eb4a46be2e6aa329da31709f
-# 4698f8edcc24806c2e57b9db57e7958299982a0cc325b00163300d0cb2828a57
-```
-
-or
-
-```bash
-# Create a 256-bit (32 bytes) random data encoded in hex
-upload_key=$(head -c 32 /dev/urandom | xxd -p -c 256)
-
-# Derive a secondary key, such as a download key, by hashing the upload key using sha256sum
-download_key=$(echo -n $upload_key | sha256sum | cut -d " " -f1)
-
-echo "Upload Key: $upload_key"
-echo "Download Key: $download_key"
-
-# Example output:
-# Upload Key: 1326a51edc413cbd5cb09961e6fc655b8e30aca8eb4a46be2e6aa329da31709f
-# Download Key: 4698f8edcc24806c2e57b9db57e7958299982a0cc325b00163300d0cb2828a57
-```
-
-### Patch Values
-
-The `/patch/` endpoint allows you to upload and merge new data into an existing JSON structure using an upload key. This endpoint supports nested paths, enabling you to update specific parts of a JSON object.
-
-- `{upload-key}` must be a 256-bit hex representation.
-- `{param}` can be a nested path, allowing for complex JSON structures.
-
-#### Example Request
-
-```http
-GET https://your-server.com/patch/{upload-key}/{param:.*}?key1=value1&key2=value2
-
-200 OK
-{
-  "message": "Data uploaded successfully",
-  "download_url": "http://127.0.0.1:8080/d/{download-key}/json",
-  "parameter_urls": {
-    "key1": "http://127.0.0.1:8080/d/{download-key}/plain/key1",
-    "key2": "http://127.0.0.1:8080/d/{download-key}/plain/key2"
-  }
-}
-```
-
-#### Example Usage
-
-##### Upload Data to Root
-
-```http
-GET https://your-server.com/patch/{upload-key}/?temp=23&hum=43
-
-200 OK
-{
-  "message": "Data uploaded successfully",
-  "download_url": "http://127.0.0.1:8080/d/{download-key}/json",
-  "parameter_urls": {
-    "temp": "http://127.0.0.1:8080/d/{download-key}/plain/temp",
-    "hum": "http://127.0.0.1:8080/d/{download-key}/plain/hum"
-  }
-}
-```
-
-##### Upload Nested Data
-
-```http
-GET https://your-server.com/patch/{upload-key}/house_1/?temp=30&hum=50
-
-200 OK
-{
-  "message": "Data uploaded successfully",
-  "download_url": "http://127.0.0.1:8080/d/{download-key}/json",
-  "parameter_urls": {
-    "temp": "http://127.0.0.1:8080/d/{download-key}/plain/house_1/temp",
-    "hum": "http://127.0.0.1:8080/d/{download-key}/plain/house_1/hum"
-  }
-}
-```
-
-##### Upload Deeply Nested Data
-
-```http
-GET https://your-server.com/patch/{upload-key}/house_2/basement/kitchen/?temp=31&hum=49
-
-200 OK
-{
-  "message": "Data uploaded successfully",
-  "download_url": "http://127.0.0.1:8080/d/{download-key}/json",
-  "parameter_urls": {
-    "temp": "http://127.0.0.1:8080/d/{download-key}/plain/house_2/basement/kitchen/temp",
-    "hum": "http://127.0.0.1:8080/d/{download-key}/plain/house_2/basement/kitchen/hum"
-  }
-}
-```
-
-Using the `/patch/` endpoint, you can dynamically build and update complex JSON structures, making it versatile for various IoT data storage needs.
-
-## Gettings startet
-
-### CLI
-
-- `-persist-values-for`: Duration for which the values are stored before they are deleted. Example: `1d` for one day, `2h` for two hours.
-- `-store`: Path to the directory where the values will be stored.
-- `-port`: The port number on which the server will listen.
-
-```
-iot-ephemeral-value-store-server -persist-values-for 1d -store ~/iot-ephemeral-value-store -port 8080
-```
-
-### Docker Run
-
-```bash
-docker run -p 8080:8080 dhcgn/iot-ephemeral-value-store-server 
-```
-
-### Docker Compose Full Example
-
+**Docker Compose:**
 ```yaml
 version: "3.3"
-
 services:
-
-  traefik:
-    image: "traefik:v3.2"
-    container_name: "traefik"
-    command:
-      #- "--log.level=DEBUG"
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entryPoints.websecure.address=:443"
-      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
-      #- "--certificatesresolvers.myresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
-      - "--certificatesresolvers.myresolver.acme.email=hostmastet@my-domain-insert-here.com"
-      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+  iot-server:
+    image: dhcgn/iot-ephemeral-value-store-server
     ports:
-      - "443:443"
       - "8080:8080"
     volumes:
-      - traefik-letsencrypt:/letsencrypt
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-
-  whoami:
-    image: "traefik/whoami"
-    container_name: "simple-service"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.whoami.rule=Host(`whoami.my-domain-insert-here.com`)"
-      - "traefik.http.routers.whoami.entrypoints=websecure"
-      - "traefik.http.routers.whoami.tls.certresolver=myresolver"
-
-  iot-server:
-    image: "dhcgn/iot-ephemeral-value-store-server"
-    container_name: "iot-ephemeral-value-store-server"
-    volumes:
-      - iot-db:/db
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.iot.rule=Host(`iot.my-domain-insert-here.com``)"
-      - "traefik.http.routers.iot.entrypoints=websecure"
-      - "traefik.http.routers.iot.tls.certresolver=myresolver"
-
-  watchtower:
-    image: containrrr/watchtower
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: --interval 3600 --cleanup iot-ephemeral-value-store-server
-    restart: unless-stopped
-
-volumes:
-  iot-db:
-  traefik-letsencrypt:
+      - ./data:/data
+    command: -persist-values-for 24h -store /data
 ```
 
-### Install the Server as a System Service
+For Docker Compose with Traefik/HTTPS setup, see **[README.TechDetails.md](README.TechDetails.md#deployment-options)**.
 
-- Run the installation script as root:
+### Run Binary
 ```bash
-sudo ./install-service.sh /path/to/iot-ephemeral-value-store-server
+iot-ephemeral-value-store-server -persist-values-for 24h -port 8080
 ```
 
-or as one-liner in a sudo shell:
-
+### Install as System Service (Linux)
 ```bash
 sudo -i
 bash <(curl -s https://raw.githubusercontent.com/dhcgn/iot-ephemeral-value-store/main/install/download-and-install.sh)
 ```
 
-![Installation Screesnhot](readme.md-assets/WindowsTerminal_OcSA89D3Ab.png)
+### Command Line Options
+- `-persist-values-for`: Data retention duration (default: "24h")
+- `-store`: Storage directory path (default: "./data")
+- `-port`: Server port (default: 8080)
+
+## Built-in Web Interface
+
+Access your server at `http://localhost:8080/`:
+- **Info Page** (`/`): Getting started guide, server stats, API examples
+- **Viewer** (`/viewer`): Real-time monitoring tool for multiple keys
+
+## Documentation
+
+- **[README.TechDetails.md](README.TechDetails.md)** - Complete API reference, deployment options, technical details
+- **[README.HomeAssistant.md](README.HomeAssistant.md)** - Home Assistant integration guide
+- **[CLAUDE.md](CLAUDE.md)** - Development guide for contributors
+
+## API Overview
+
+| Operation | Endpoint | Description |
+|-----------|----------|-------------|
+| Create key pair | `GET /kp` | Generate upload/download key pair |
+| Upload data | `GET /u/{uploadKey}?param=value` | Upload/replace data |
+| Patch data | `GET /patch/{uploadKey}/path?param=value` | Merge data into nested structure |
+| Download JSON | `GET /d/{downloadKey}/json` | Get all data as JSON |
+| Download plain | `GET /d/{downloadKey}/plain/{param}` | Get single value as plain text |
+| Delete data | `GET /delete/{uploadKey}` | Delete all data for this key |
+
+See **[README.TechDetails.md](README.TechDetails.md)** for complete API documentation.
+
+## Why Use This?
+
+- **No authentication complexity**: Just keys - perfect for simple IoT devices
+- **Privacy by design**: Separate upload/download keys prevent unauthorized writes
+- **Zero configuration**: No database setup, no complex configs
+- **Automatic cleanup**: Data expires automatically - no maintenance needed
+- **Simple integration**: Works with any device that can make HTTP GET requests
+- **Self-hosted**: Run on your network, keep your data private
+
+## Example: Patch Feature
+
+Build complex data structures from multiple uploads:
+
+```bash
+# Upload from different sensors to the same key
+curl "https://iot.hdev.io/patch/YOUR_KEY/living_room/?temp=22"
+curl "https://iot.hdev.io/patch/YOUR_KEY/bedroom/?temp=20"
+curl "https://iot.hdev.io/patch/YOUR_KEY/basement/?temp=18"
+```
+
+Download once to get everything:
+```bash
+curl https://iot.hdev.io/d/YOUR_DOWNLOAD_KEY/json
+```
+```json
+{
+  "living_room": {
+    "temp": "22",
+    "timestamp": "2024-12-29T18:51:07Z"
+  },
+  "bedroom": {
+    "temp": "20",
+    "timestamp": "2024-12-29T18:51:08Z"
+  },
+  "basement": {
+    "temp": "18",
+    "timestamp": "2024-12-29T18:51:09Z"
+  },
+  "timestamp": "2024-12-29T18:51:09Z"
+}
+```
+
+## License
+
+Licensed under the MIT License. See [LICENSE](LICENSE) file for details.
+
+## Links
+
+- **GitHub**: [github.com/dhcgn/iot-ephemeral-value-store](https://github.com/dhcgn/iot-ephemeral-value-store)
+- **Docker Hub**: [dhcgn/iot-ephemeral-value-store-server](https://hub.docker.com/r/dhcgn/iot-ephemeral-value-store-server)
+- **Test Installation**: [iot.hdev.io](https://iot.hdev.io) (fair use)
