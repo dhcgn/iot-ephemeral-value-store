@@ -175,7 +175,11 @@ func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// collectAllPaths recursively collects all paths in a nested map structure
+// collectAllPaths recursively collects all paths in a nested map structure.
+// The data parameter should be a map[string]interface{} representing the JSON structure.
+// The prefix parameter should be an empty string ("") for root-level calls; it will be
+// built up recursively as the function traverses nested maps.
+// Returns a slice of path strings in the format "key" or "parent/child" for nested values.
 func collectAllPaths(data interface{}, prefix string) []string {
 	var paths []string
 	
