@@ -139,6 +139,9 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, stats *stats.Sta
 
 	r.HandleFunc("/kp", hhc.KeyPairHandler).Methods("GET")
 
+	// Viewer page
+	r.HandleFunc("/viewer", viewerHandler())
+
 	// Legacy routes
 	r.HandleFunc("/{uploadKey}", hhc.UploadHandler).Methods("GET")
 	r.HandleFunc("/{uploadKey}/", hhc.UploadHandler).Methods("GET")
@@ -196,6 +199,18 @@ func templateHandler(tmpl *template.Template, stats *stats.Stats) http.HandlerFu
 			StateData: stats.GetCurrentStats(),
 		}
 		tmpl.Execute(w, data)
+	}
+}
+
+func viewerHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		content, err := staticFiles.ReadFile("static/viewer.html")
+		if err != nil {
+			http.Error(w, "Viewer page not found", http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Write(content)
 	}
 }
 

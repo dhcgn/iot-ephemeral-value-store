@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Ephemeral Value Store Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .info-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+
+        .info-box strong {
+            color: #856404;
+        }
+
+        .controls {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .controls h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .input-group input {
+            flex: 1;
+            min-width: 250px;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .input-group input::placeholder {
+            color: #999;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .data-export {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .keys-container {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .keys-container h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .key-item {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+
+        .key-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .key-label {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 14px;
+        }
+
+        .key-name-container {
+            margin-bottom: 15px;
+        }
+
+        .key-name-input {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #667eea;
+            background: white;
+            transition: border-color 0.3s;
+        }
+
+        .key-name-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .key-name-input::placeholder {
+            color: #999;
+            font-weight: normal;
+        }
+
+        .key-value {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #333;
+            word-break: break-all;
+            background: white;
+            padding: 8px;
+            border-radius: 3px;
+            margin: 5px 0;
+        }
+
+        .key-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .data-display {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .data-display pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 12px;
+            color: #333;
+        }
+
+        .timestamp {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-polling {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 15px;
+            opacity: 0.3;
+        }
+
+        .poll-interval {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .poll-interval label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .poll-interval select {
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin-bottom: 10px;
+            resize: vertical;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .input-group {
+                flex-direction: column;
+            }
+
+            .input-group input {
+                min-width: 100%;
+            }
+
+            .key-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .key-actions {
+                width: 100%;
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 IoT Ephemeral Value Store Viewer</h1>
+            <p>Monitor your IoT data in real-time. Add download keys to watch for changes, and this viewer will
+                periodically poll the server to display the latest values.</p>
+            <div class="info-box">
+                <strong>⚠️ Important:</strong> This viewer uses <strong>download keys</strong> to retrieve data. Each
+                key pair consists of an <strong>upload key</strong> (for devices to send data) and a <strong>download
+                    key</strong> (for viewing data). You can only watch data using the download key. To create a new
+                key pair, use the "Create New Key Pair" button below.
+            </div>
+        </div>
+
+        <div class="controls">
+            <h2>⚙️ Controls</h2>
+
+            <div class="input-group">
+                <input type="text" id="downloadKeyInput" placeholder="Enter download key (64 hex characters)">
+                <button class="btn btn-primary" onclick="addKey()">Add Download Key</button>
+                <button class="btn btn-success" onclick="createNewKeyPair()">Create New Key Pair</button>
+            </div>
+
+            <div class="poll-interval">
+                <label for="pollInterval">Poll Interval:</label>
+                <select id="pollInterval" onchange="updatePollInterval()">
+                    <option value="5000">5 seconds</option>
+                    <option value="10000" selected>10 seconds</option>
+                    <option value="30000">30 seconds</option>
+                    <option value="60000">1 minute</option>
+                    <option value="300000">5 minutes</option>
+                </select>
+                <span id="pollStatus" class="status status-polling">Polling active</span>
+            </div>
+
+            <div class="data-export">
+                <button class="btn btn-secondary" onclick="exportData()">📤 Export Keys</button>
+                <button class="btn btn-secondary" onclick="showImportDialog()">📥 Import Keys</button>
+            </div>
+
+            <div id="importDialog" style="display: none; margin-top: 15px;">
+                <textarea id="importData" placeholder="Paste exported JSON data here..."></textarea>
+                <div class="data-export">
+                    <button class="btn btn-primary" onclick="importData()">Import</button>
+                    <button class="btn btn-secondary" onclick="hideImportDialog()">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="keys-container">
+            <h2>📊 Watched Keys</h2>
+            <div id="keysDisplay"></div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const STORAGE_KEY = 'iot-viewer-keys';
+        const POLL_INTERVAL_KEY = 'iot-viewer-poll-interval';
+        let pollInterval = 10000; // Default 10 seconds
+        let pollTimer = null;
+
+        // Data structure
+        let watchedKeys = [];
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function () {
+            loadKeysFromStorage();
+            loadPollInterval();
+            renderKeys();
+            startPolling();
+        });
+
+        // Load keys from localStorage
+        function loadKeysFromStorage() {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (stored) {
+                    watchedKeys = JSON.parse(stored);
+                }
+            } catch (e) {
+                console.error('Error loading keys from storage:', e);
+                watchedKeys = [];
+            }
+        }
+
+        // Save keys to localStorage
+        function saveKeysToStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(watchedKeys));
+            } catch (e) {
+                console.error('Error saving keys to storage:', e);
+                alert('Failed to save keys to browser storage.');
+            }
+        }
+
+        // Load poll interval
+        function loadPollInterval() {
+            try {
+                const stored = localStorage.getItem(POLL_INTERVAL_KEY);
+                if (stored) {
+                    const storedValue = parseInt(stored, 10);
+                    // Validate: must be one of the allowed values
+                    const allowedValues = [5000, 10000, 30000, 60000, 300000];
+                    if (allowedValues.includes(storedValue)) {
+                        pollInterval = storedValue;
+                        document.getElementById('pollInterval').value = pollInterval;
+                    } else {
+                        // Invalid value, reset to default
+                        console.warn('Invalid poll interval in storage, using default');
+                        pollInterval = 10000;
+                    }
+                }
+            } catch (e) {
+                console.error('Error loading poll interval:', e);
+            }
+        }
+
+        // Update poll interval
+        function updatePollInterval() {
+            const newValue = parseInt(document.getElementById('pollInterval').value, 10);
+            // Validate: must be one of the allowed values
+            const allowedValues = [5000, 10000, 30000, 60000, 300000];
+            if (!allowedValues.includes(newValue)) {
+                console.error('Invalid poll interval selected');
+                return;
+            }
+            pollInterval = newValue;
+            localStorage.setItem(POLL_INTERVAL_KEY, pollInterval);
+            stopPolling();
+            startPolling();
+        }
+
+        // Validate download key format (64 hex characters)
+        function isValidDownloadKey(key) {
+            return /^[a-fA-F0-9]{64}$/.test(key);
+        }
+
+        // Add a new key to watch
+        function addKey() {
+            const input = document.getElementById('downloadKeyInput');
+            const downloadKey = input.value.trim();
+
+            if (!downloadKey) {
+                alert('Please enter a download key.');
+                return;
+            }
+
+            if (!isValidDownloadKey(downloadKey)) {
+                alert('Invalid download key format. Must be 64 hexadecimal characters.');
+                return;
+            }
+
+            // Check if key already exists
+            if (watchedKeys.find(k => k.downloadKey === downloadKey)) {
+                alert('This key is already being watched.');
+                return;
+            }
+
+            // Add the key
+            watchedKeys.push({
+                downloadKey: downloadKey,
+                uploadKey: null,
+                name: '',
+                data: null,
+                lastUpdated: null,
+                status: 'pending',
+                error: null
+            });
+
+            saveKeysToStorage();
+            renderKeys();
+            input.value = '';
+
+            // Fetch data immediately
+            fetchKeyData(downloadKey);
+        }
+
+        // Create a new key pair
+        async function createNewKeyPair() {
+            try {
+                const response = await fetch('/kp');
+                if (!response.ok) {
+                    throw new Error('Failed to create key pair');
+                }
+
+                const data = await response.json();
+                const downloadKey = data['download-key'];
+                const uploadKey = data['upload-key'];
+
+                // Check if key already exists
+                if (watchedKeys.find(k => k.downloadKey === downloadKey)) {
+                    alert('This key pair was already created and is being watched.');
+                    return;
+                }
+
+                // Add the key with upload key info
+                watchedKeys.push({
+                    downloadKey: downloadKey,
+                    uploadKey: uploadKey,
+                    name: '',
+                    data: null,
+                    lastUpdated: null,
+                    status: 'success',
+                    error: null
+                });
+
+                saveKeysToStorage();
+                renderKeys();
+
+                // Success message without exposing keys in alert
+                // Keys are visible in the UI below
+                alert('New key pair created successfully! The keys are displayed below in the watched keys section.');
+
+            } catch (e) {
+                console.error('Error creating key pair:', e);
+                alert('Failed to create new key pair: ' + e.message);
+            }
+        }
+
+        // Remove a key from watch list
+        function removeKey(downloadKey) {
+            if (!confirm('Are you sure you want to remove this key from the watch list?')) {
+                return;
+            }
+
+            watchedKeys = watchedKeys.filter(k => k.downloadKey !== downloadKey);
+            saveKeysToStorage();
+            renderKeys();
+        }
+
+        // Helper to get downloadKey from element
+        function getDownloadKeyFromElement(element) {
+            const keyItem = element.closest('.key-item');
+            return keyItem ? keyItem.getAttribute('data-download-key') : null;
+        }
+
+        // Update key name (wrapper for DOM event)
+        function updateKeyNameFromElement(element) {
+            const downloadKey = getDownloadKeyFromElement(element);
+            if (downloadKey) {
+                updateKeyName(downloadKey, element.value);
+            }
+        }
+
+        // Update key name
+        function updateKeyName(downloadKey, newName) {
+            const keyObj = watchedKeys.find(k => k.downloadKey === downloadKey);
+            if (keyObj) {
+                keyObj.name = newName;
+                saveKeysToStorage();
+            }
+        }
+
+        // Fetch key data (wrapper for DOM event)
+        function fetchKeyDataFromElement(element) {
+            const downloadKey = getDownloadKeyFromElement(element);
+            if (downloadKey) {
+                fetchKeyData(downloadKey);
+            }
+        }
+
+        // Remove key (wrapper for DOM event)
+        function removeKeyFromElement(element) {
+            const downloadKey = getDownloadKeyFromElement(element);
+            if (downloadKey) {
+                removeKey(downloadKey);
+            }
+        }
+
+        // Fetch data for a specific key
+        async function fetchKeyData(downloadKey) {
+            const keyObj = watchedKeys.find(k => k.downloadKey === downloadKey);
+            if (!keyObj) return;
+
+            try {
+                const response = await fetch(`/d/${downloadKey}/json`);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    keyObj.data = data;
+                    keyObj.lastUpdated = new Date().toISOString();
+                    keyObj.status = 'success';
+                    keyObj.error = null;
+                } else if (response.status === 404) {
+                    keyObj.data = null;
+                    keyObj.status = 'error';
+                    keyObj.error = 'No data found (404)';
+                } else {
+                    keyObj.status = 'error';
+                    keyObj.error = `HTTP ${response.status}`;
+                }
+            } catch (e) {
+                keyObj.status = 'error';
+                keyObj.error = e.message;
+            }
+
+            saveKeysToStorage();
+            renderKeys();
+        }
+
+        // Fetch all keys
+        function fetchAllKeys() {
+            watchedKeys.forEach(key => {
+                fetchKeyData(key.downloadKey);
+            });
+        }
+
+        // Start polling
+        function startPolling() {
+            if (pollTimer) {
+                clearInterval(pollTimer);
+            }
+
+            // Initial fetch
+            fetchAllKeys();
+
+            // Set up periodic polling
+            pollTimer = setInterval(fetchAllKeys, pollInterval);
+
+            document.getElementById('pollStatus').textContent = 'Polling active';
+            document.getElementById('pollStatus').className = 'status status-polling';
+        }
+
+        // Stop polling
+        function stopPolling() {
+            if (pollTimer) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+            }
+        }
+
+        // Render all keys
+        function renderKeys() {
+            const container = document.getElementById('keysDisplay');
+
+            if (watchedKeys.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path>
+                        </svg>
+                        <p>No keys are being watched.</p>
+                        <p>Add a download key or create a new key pair to get started.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = watchedKeys.map(key => renderKeyItem(key)).join('');
+        }
+
+        // Render a single key item
+        function renderKeyItem(key) {
+            const statusClass = key.status === 'success' ? 'status-success' : 
+                                key.status === 'error' ? 'status-error' : 'status-polling';
+            const statusText = key.status === 'success' ? 'Data loaded' : 
+                              key.status === 'error' ? 'Error' : 'Pending';
+
+            let uploadKeySection = '';
+            if (key.uploadKey) {
+                uploadKeySection = `
+                    <div>
+                        <div class="key-label">Upload Key (for devices):</div>
+                        <div class="key-value">${escapeHtml(key.uploadKey)}</div>
+                    </div>
+                `;
+            }
+
+            let dataSection = '';
+            if (key.data) {
+                dataSection = `
+                    <div class="data-display">
+                        <pre>${escapeHtml(JSON.stringify(key.data, null, 2))}</pre>
+                    </div>
+                `;
+            } else if (key.error) {
+                dataSection = `
+                    <div class="data-display" style="background: #f8d7da; color: #721c24;">
+                        <pre>Error: ${escapeHtml(key.error)}</pre>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="key-item" data-download-key="${escapeHtml(key.downloadKey)}">
+                    <div class="key-name-container">
+                        <input 
+                            type="text" 
+                            class="key-name-input" 
+                            placeholder="Enter a name for this key (optional)" 
+                            value="${escapeHtml(key.name || '')}"
+                            onchange="updateKeyNameFromElement(this)"
+                            onclick="event.stopPropagation()"
+                        />
+                    </div>
+                    <div class="key-header">
+                        <span class="status ${statusClass}">${statusText}</span>
+                        <div class="key-actions">
+                            <button class="btn btn-primary btn-small" onclick="fetchKeyDataFromElement(this)">
+                                🔄 Refresh
+                            </button>
+                            <button class="btn btn-danger btn-small" onclick="removeKeyFromElement(this)">
+                                🗑️ Remove
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="key-label">Download Key (for viewing):</div>
+                        <div class="key-value">${escapeHtml(key.downloadKey)}</div>
+                    </div>
+                    ${uploadKeySection}
+                    ${key.lastUpdated ? `<div class="timestamp">Last updated: ${new Date(key.lastUpdated).toLocaleString()}</div>` : ''}
+                    ${dataSection}
+                </div>
+            `;
+        }
+
+        // Export data to JSON
+        function exportData() {
+            try {
+                const exportObj = {
+                    version: 1,
+                    exportDate: new Date().toISOString(),
+                    keys: watchedKeys
+                };
+
+                const dataStr = JSON.stringify(exportObj, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `iot-viewer-export-${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                URL.revokeObjectURL(url);
+
+                alert('Keys exported successfully!');
+            } catch (e) {
+                console.error('Error exporting data:', e);
+                alert('Failed to export data: ' + e.message);
+            }
+        }
+
+        // Show import dialog
+        function showImportDialog() {
+            document.getElementById('importDialog').style.display = 'block';
+            document.getElementById('importData').value = '';
+        }
+
+        // Hide import dialog
+        function hideImportDialog() {
+            document.getElementById('importDialog').style.display = 'none';
+        }
+
+        // Import data from JSON
+        function importData() {
+            try {
+                const importText = document.getElementById('importData').value.trim();
+                if (!importText) {
+                    alert('Please paste exported data.');
+                    return;
+                }
+
+                const importObj = JSON.parse(importText);
+
+                if (!importObj.keys || !Array.isArray(importObj.keys)) {
+                    throw new Error('Invalid import format: missing keys array');
+                }
+
+                // Merge imported keys with existing keys (avoid duplicates)
+                let addedCount = 0;
+                importObj.keys.forEach(importedKey => {
+                    if (!watchedKeys.find(k => k.downloadKey === importedKey.downloadKey)) {
+                        watchedKeys.push(importedKey);
+                        addedCount++;
+                    }
+                });
+
+                saveKeysToStorage();
+                renderKeys();
+                hideImportDialog();
+
+                alert(`Import successful! Added ${addedCount} new key(s).`);
+
+                // Fetch data for newly imported keys
+                fetchAllKeys();
+
+            } catch (e) {
+                console.error('Error importing data:', e);
+                alert('Failed to import data: ' + e.message);
+            }
+        }
+
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            if (text == null) {
+                return '';
+            }
+            const div = document.createElement('div');
+            div.textContent = String(text);
+            return div.innerHTML;
+        }
+    </script>
+</body>
+
+</html>
