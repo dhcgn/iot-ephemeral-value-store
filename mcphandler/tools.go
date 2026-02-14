@@ -12,6 +12,48 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// ToolDescriptor defines metadata for a registered MCP tool
+type ToolDescriptor struct {
+	Name        string
+	Description string
+}
+
+// toolRegistry defines all available tools with their metadata
+var toolRegistry = []ToolDescriptor{
+	{
+		Name: "generate_key_pair",
+		Description: "Generate a new upload/download key pair for the IoT ephemeral value store. The upload key is used to store data (must be kept secret), and the download key is used to retrieve data (can be shared for read-only access). Keys are cryptographically linked - the download key is derived from the upload key using SHA256.",
+	},
+	{
+		Name: "upload_data",
+		Description: "Upload data to the IoT ephemeral value store using an upload key. This operation REPLACES any existing data for this key with the new data. All parameters are stored with an automatic timestamp. Use this for initial data uploads or complete replacements. For merging with existing data, use patch_data instead.",
+	},
+	{
+		Name: "patch_data",
+		Description: "Merge new data with existing data in the IoT ephemeral value store. This operation MERGES the new parameters with existing data rather than replacing it. You can specify a nested path (e.g., 'living_room/sensors') to organize data hierarchically. Perfect for multiple IoT devices updating different parts of a shared data structure. Each update includes an automatic timestamp.",
+	},
+	{
+		Name: "download_data",
+		Description: "Download data from the IoT ephemeral value store using a download key. You can retrieve all data as a JSON object, or specify a parameter path (e.g., 'temp' or 'living_room/temp') to get a specific value. The download key is read-only and cannot be used to modify data. Supports nested parameter paths using '/' separator.",
+	},
+	{
+		Name: "delete_data",
+		Description: "Delete all data associated with an upload key from the IoT ephemeral value store. This permanently removes all stored values for this key. Note that data is automatically deleted after the configured retention period (default: 24 hours), so manual deletion is optional. Requires the upload key (not the download key).",
+	},
+}
+
+// RegisteredToolNames contains the names of all registered MCP tools
+// This is derived from toolRegistry to ensure consistency
+var RegisteredToolNames = extractToolNames()
+
+func extractToolNames() []string {
+	names := make([]string, len(toolRegistry))
+	for i, tool := range toolRegistry {
+		names[i] = tool.Name
+	}
+	return names
+}
+
 // GenerateKeyPairInput represents the input for generating a key pair
 type GenerateKeyPairInput struct{}
 
@@ -366,32 +408,47 @@ func mergeDataAtPath(existingData map[string]interface{}, path string, newData m
 // RegisterTools registers all MCP tools with the server
 func (c Config) RegisterTools(server *mcp.Server) {
 	// Tool: generate_key_pair
+	tool := getToolByName("generate_key_pair")
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "generate_key_pair",
-		Description: "Generate a new upload/download key pair for the IoT ephemeral value store. The upload key is used to store data (must be kept secret), and the download key is used to retrieve data (can be shared for read-only access). Keys are cryptographically linked - the download key is derived from the upload key using SHA256.",
+		Name:        tool.Name,
+		Description: tool.Description,
 	}, c.GenerateKeyPairHandler)
 
 	// Tool: upload_data
+	tool = getToolByName("upload_data")
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "upload_data",
-		Description: "Upload data to the IoT ephemeral value store using an upload key. This operation REPLACES any existing data for this key with the new data. All parameters are stored with an automatic timestamp. Use this for initial data uploads or complete replacements. For merging with existing data, use patch_data instead.",
+		Name:        tool.Name,
+		Description: tool.Description,
 	}, c.UploadDataHandler)
 
 	// Tool: patch_data
+	tool = getToolByName("patch_data")
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "patch_data",
-		Description: "Merge new data with existing data in the IoT ephemeral value store. This operation MERGES the new parameters with existing data rather than replacing it. You can specify a nested path (e.g., 'living_room/sensors') to organize data hierarchically. Perfect for multiple IoT devices updating different parts of a shared data structure. Each update includes an automatic timestamp.",
+		Name:        tool.Name,
+		Description: tool.Description,
 	}, c.PatchDataHandler)
 
 	// Tool: download_data
+	tool = getToolByName("download_data")
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "download_data",
-		Description: "Download data from the IoT ephemeral value store using a download key. You can retrieve all data as a JSON object, or specify a parameter path (e.g., 'temp' or 'living_room/temp') to get a specific value. The download key is read-only and cannot be used to modify data. Supports nested parameter paths using '/' separator.",
+		Name:        tool.Name,
+		Description: tool.Description,
 	}, c.DownloadDataHandler)
 
 	// Tool: delete_data
+	tool = getToolByName("delete_data")
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "delete_data",
-		Description: "Delete all data associated with an upload key from the IoT ephemeral value store. This permanently removes all stored values for this key. Note that data is automatically deleted after the configured retention period (default: 24 hours), so manual deletion is optional. Requires the upload key (not the download key).",
+		Name:        tool.Name,
+		Description: tool.Description,
 	}, c.DeleteDataHandler)
+}
+
+// getToolByName retrieves tool metadata by name
+func getToolByName(name string) *ToolDescriptor {
+	for i, tool := range toolRegistry {
+		if tool.Name == name {
+			return &toolRegistry[i]
+		}
+	}
+	return nil // Should not happen if toolRegistry is properly maintained
 }

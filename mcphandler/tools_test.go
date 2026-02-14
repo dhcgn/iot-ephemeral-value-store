@@ -481,19 +481,10 @@ func TestAllCapabilitiesImplemented(t *testing.T) {
 		t.Fatalf("Failed to create MCP server: %v", err)
 	}
 
-	// Define expected capabilities
-	expectedTools := []string{
-		"generate_key_pair",
-		"upload_data",
-		"patch_data",
-		"download_data",
-		"delete_data",
-	}
-
 	ctx := context.Background()
 
 	// Test each tool can be called (this verifies they are registered)
-	for _, toolName := range expectedTools {
+	for _, toolName := range RegisteredToolNames {
 		t.Run(toolName, func(t *testing.T) {
 			// Try to call the tool with invalid/empty parameters to test it's registered
 			// We don't care if it fails validation, we just want to ensure it's registered
@@ -540,7 +531,7 @@ func TestAllCapabilitiesImplemented(t *testing.T) {
 		})
 	}
 
-	t.Logf("Successfully verified all %d tool handlers are callable", len(expectedTools))
+	t.Logf("Successfully verified all %d tool handlers are callable", len(RegisteredToolNames))
 
 	// Verify the MCP server was created successfully with the expected version
 	if mcpServer == nil {

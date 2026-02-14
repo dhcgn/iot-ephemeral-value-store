@@ -79,13 +79,7 @@ func (m *MCPServer) handleInfoRequest(w http.ResponseWriter, r *http.Request) {
 		},
 		"capabilities": map[string]interface{}{
 			"tools": map[string]interface{}{
-				"available": []string{
-					"generate_key_pair",
-					"upload_data",
-					"patch_data",
-					"download_data",
-					"delete_data",
-				},
+				"available": RegisteredToolNames,
 			},
 		},
 		"transport": "HTTP Streamable (SSE)",
