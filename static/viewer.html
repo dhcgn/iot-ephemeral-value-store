@@ -982,7 +982,7 @@
             const keyObj = watchedKeys.find(k => k.downloadKey === downloadKey);
             
             if (!keyObj) {
-                alert('Key not found');
+                alert('Unable to find the selected key. Please refresh the page and try again.');
                 return;
             }
 
@@ -997,7 +997,7 @@
         // Show curl command modal with upload key
         function showUploadCurl(uploadKey) {
             const serverUrl = window.location.origin;
-            const curlCommand = `curl "${serverUrl}/u/${uploadKey}/?param1=value1&param2=value2"`;
+            const curlCommand = `curl "${serverUrl}/u/${uploadKey}/?temperature=25&humidity=60"`;
             
             document.getElementById('curlCommand').textContent = curlCommand;
             document.getElementById('curlModal').style.display = 'block';
@@ -1037,7 +1037,7 @@
                     }, 3000);
                 } catch (err) {
                     console.error('Clipboard copy failed:', err);
-                    alert('Failed to copy to clipboard');
+                    alert('Failed to copy curl command to clipboard. Please try copying manually from the text above.');
                 }
                 document.body.removeChild(textArea);
             }
