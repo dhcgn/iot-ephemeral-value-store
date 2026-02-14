@@ -756,7 +756,7 @@
                 } else if (response.status === 404) {
                     keyObj.data = null;
                     keyObj.status = 'error';
-                    keyObj.error = 'No data found (404) - Nothing has been uploaded yet';
+                    keyObj.error = 'No data found (404) - Key may not exist or no data has been uploaded yet';
                 } else {
                     keyObj.status = 'error';
                     keyObj.error = `HTTP ${response.status}`;
@@ -1036,6 +1036,7 @@
                         successMsg.classList.remove('show');
                     }, 3000);
                 } catch (err) {
+                    console.error('Clipboard copy failed:', err);
                     alert('Failed to copy to clipboard');
                 }
                 document.body.removeChild(textArea);
