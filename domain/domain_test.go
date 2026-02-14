@@ -207,6 +207,8 @@ func TestValidateUploadKeyWithPrefix(t *testing.T) {
 		{"Valid key with u_ prefix uppercase", "u_1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF", false},
 		{"Invalid length with prefix", "u_1234567890abcdef", true},
 		{"Non-hex characters with prefix", "u_1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdeg", true},
+		{"Empty string", "", true},
+		{"Only prefix", "u_", true},
 	}
 
 	for _, tt := range tests {
@@ -228,6 +230,8 @@ func TestDeriveDownloadKeyWithPrefix(t *testing.T) {
 		{"Valid key with u_ prefix", "u_1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", false},
 		{"Valid key without prefix", "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", false},
 		{"Invalid length with prefix", "u_1234567890abcdef", true},
+		{"Empty string", "", true},
+		{"Only prefix", "u_", true},
 	}
 
 	for _, tt := range tests {
