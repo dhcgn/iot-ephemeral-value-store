@@ -27,23 +27,24 @@ type testCase struct {
 	bodyNotContains    string
 }
 
-func createTestEnvironment(t *testing.T) (*stats.Stats, httphandler.Config, middleware.Config) {
-	stats := stats.NewStats()
+func createTestEnvironment(t *testing.T) (*stats.Stats, *stats.Stats, httphandler.Config, middleware.Config) {
+	restStats := stats.NewStats()
+	mcpStats := stats.NewStats()
 	storageInMemory := storage.NewInMemoryStorage()
 
 	httphandlerConfig := httphandler.Config{
 		StorageInstance: storageInMemory,
-		StatsInstance:   stats,
+		StatsInstance:   restStats,
 	}
 
 	middlewareConfig := middleware.Config{
 		RateLimitPerSecond: RateLimitPerSecond,
 		RateLimitBurst:     RateLimitBurst,
 		MaxRequestSize:     MaxRequestSize,
-		StatsInstance:      stats,
+		StatsInstance:      restStats,
 	}
 
-	return stats, httphandlerConfig, middlewareConfig
+	return restStats, mcpStats, httphandlerConfig, middlewareConfig
 }
 
 func runTests(t *testing.T, router http.Handler, tests []testCase) {
@@ -73,8 +74,8 @@ func buildURL(format string, a ...interface{}) string {
 }
 
 func TestCreateRouter(t *testing.T) {
-	stats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
-	router := createRouter(httphandlerConfig, middlewareConfig, stats)
+	restStats, mcpStats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
+	router := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats)
 
 	tests := []testCase{
 		{"GET /", "/", http.StatusOK, false, "", ""},
@@ -86,8 +87,8 @@ func TestCreateRouter(t *testing.T) {
 }
 
 func TestLegacyRoutes(t *testing.T) {
-	stats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
-	router := createRouter(httphandlerConfig, middlewareConfig, stats)
+	restStats, mcpStats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
+	router := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats)
 
 	tests := []testCase{
 		{"Upload", buildURL("/%s/?value=8923423", keyUp), http.StatusOK, true, "Data uploaded successfully", ""},
@@ -99,8 +100,8 @@ func TestLegacyRoutes(t *testing.T) {
 }
 
 func TestRoutesUploadDownload(t *testing.T) {
-	stats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
-	router := createRouter(httphandlerConfig, middlewareConfig, stats)
+	restStats, mcpStats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
+	router := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats)
 
 	tests := []testCase{
 		{"Upload", buildURL("/u/%s/?value=8923423", keyUp), http.StatusOK, true, "Data uploaded successfully", ""},
@@ -112,8 +113,8 @@ func TestRoutesUploadDownload(t *testing.T) {
 }
 
 func TestRoutesUploadDownloadWithBase64(t *testing.T) {
-	stats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
-	router := createRouter(httphandlerConfig, middlewareConfig, stats)
+	restStats, mcpStats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
+	router := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats)
 
 	tests := []testCase{
 		{"Upload", buildURL("/u/%s/?value=SGFsbG8gV2VsdCEK", keyUp), http.StatusOK, true, "Data uploaded successfully", ""},
@@ -126,8 +127,8 @@ func TestRoutesUploadDownloadWithBase64(t *testing.T) {
 }
 
 func TestRoutesUploadDownloadDelete(t *testing.T) {
-	stats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
-	router := createRouter(httphandlerConfig, middlewareConfig, stats)
+	restStats, mcpStats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
+	router := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats)
 
 	tests := []testCase{
 		{"Upload", buildURL("/u/%s/?value=8923423", keyUp), http.StatusOK, true, "Data uploaded successfully", ""},
@@ -142,8 +143,8 @@ func TestRoutesUploadDownloadDelete(t *testing.T) {
 }
 
 func TestLegacyRoutesWithDifferentPathEndings(t *testing.T) {
-	stats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
-	router := createRouter(httphandlerConfig, middlewareConfig, stats)
+	restStats, mcpStats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
+	router := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats)
 
 	tests := []testCase{
 		{"Upload Legacy with ending /", buildURL("/%s/?value=8923423", keyUp), http.StatusOK, true, "Data uploaded successfully", ""},
@@ -156,8 +157,8 @@ func TestLegacyRoutesWithDifferentPathEndings(t *testing.T) {
 }
 
 func TestRoutesPatchDownload(t *testing.T) {
-	stats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
-	router := createRouter(httphandlerConfig, middlewareConfig, stats)
+	restStats, mcpStats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
+	router := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats)
 
 	tests := []testCase{
 		{"Upload patch level 0", buildURL("/patch/%s/?value=1_4324232", keyUp), http.StatusOK, true, "Data uploaded successfully", ""},

@@ -16,10 +16,16 @@ type MCPServer struct {
 
 // NewMCPServer creates a new MCP server instance
 func NewMCPServer(config Config) (*MCPServer, error) {
+	// Use provided version or default to "dev" if empty
+	version := config.Version
+	if version == "" {
+		version = "dev"
+	}
+
 	// Create MCP server with implementation and capabilities
 	implementation := &mcp.Implementation{
 		Name:    "iot-ephemeral-value-store",
-		Version: "1.0.0",
+		Version: version,
 	}
 
 	server := mcp.NewServer(implementation, nil)
@@ -58,12 +64,18 @@ func (m *MCPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // handleInfoRequest returns server information for GET requests
 func (m *MCPServer) handleInfoRequest(w http.ResponseWriter, r *http.Request) {
+	// Use provided version or default
+	version := m.config.Version
+	if version == "" {
+		version = "dev"
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	info := map[string]interface{}{
 		"protocol": "Model Context Protocol (MCP)",
 		"server": map[string]string{
 			"name":    "iot-ephemeral-value-store",
-			"version": "1.0.0",
+			"version": version,
 		},
 		"capabilities": map[string]interface{}{
 			"tools": map[string]interface{}{

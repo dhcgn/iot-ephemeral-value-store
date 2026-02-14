@@ -86,24 +86,25 @@ func main() {
 		log.Fatalf("Failed to parse duration: %v", err)
 	}
 
-	stats := stats.NewStats()
+	restStats := stats.NewStats()
+	mcpStats := stats.NewStats()
 
 	storage := createStorage(storePath, persistDuration)
 	defer storage.Db.Close()
 
 	httphandlerConfig := httphandler.Config{
 		StorageInstance: storage,
-		StatsInstance:   stats,
+		StatsInstance:   restStats,
 	}
 
 	middlewareConfig := middleware.Config{
 		RateLimitPerSecond: RateLimitPerSecond,
 		RateLimitBurst:     RateLimitBurst,
 		MaxRequestSize:     MaxRequestSize,
-		StatsInstance:      stats,
+		StatsInstance:      restStats,
 	}
 
-	r := createRouter(httphandlerConfig, middlewareConfig, stats)
+	r := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats)
 
 	serverAddress := fmt.Sprintf(":%d", port)
 	srv := &http.Server{
@@ -117,7 +118,7 @@ func main() {
 	listenAndServe(srv)
 }
 
-func createRouter(hhc httphandler.Config, mc middleware.Config, stats *stats.Stats) *mux.Router {
+func createRouter(hhc httphandler.Config, mc middleware.Config, restStats *stats.Stats, mcpStats *stats.Stats) *mux.Router {
 	// Template parsing
 	tmpl, err := template.ParseFS(staticFiles, "static/index.html")
 	if err != nil {
@@ -138,11 +139,12 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, stats *stats.Sta
 	r.Use(mc.LimitRequestSize)
 	r.Use(mc.RateLimit)
 
-	// MCP endpoint - create MCP server
+	// MCP endpoint - create MCP server with separate stats instance
 	mcpConfig := mcphandler.Config{
 		StorageInstance: hhc.StorageInstance,
-		StatsInstance:   hhc.StatsInstance,
+		StatsInstance:   mcpStats,
 		ServerHost:      fmt.Sprintf("http://localhost:%d", port),
+		Version:         Version,
 	}
 	mcpServer, err := mcphandler.NewMCPServer(mcpConfig)
 	if err != nil {
@@ -189,7 +191,7 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, stats *stats.Sta
 	r.HandleFunc("/delete/{uploadKey}", hhc.DeleteHandler).Methods("GET")
 	r.HandleFunc("/delete/{uploadKey}/", hhc.DeleteHandler).Methods("GET")
 
-	r.HandleFunc("/", templateHandler(tmpl, stats))
+	r.HandleFunc("/", templateHandler(tmpl, restStats, mcpStats))
 
 	// Not Found handler
 	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -203,7 +205,7 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, stats *stats.Sta
 	return r
 }
 
-func templateHandler(tmpl *template.Template, stats *stats.Stats) http.HandlerFunc {
+func templateHandler(tmpl *template.Template, restStats *stats.Stats, mcpStats *stats.Stats) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		key := domain.GenerateRandomKey()
 		key_down, err := domain.DeriveDownloadKey(key)
@@ -218,9 +220,10 @@ func templateHandler(tmpl *template.Template, stats *stats.Stats) http.HandlerFu
 			Version:       Version,
 			BuildTime:     BuildTime,
 
-			Uptime: stats.GetUptime(),
+			Uptime: restStats.GetUptime(),
 
-			StateData: stats.GetCurrentStats(),
+			StateData:    restStats.GetCurrentStats(),
+			MCPStateData: mcpStats.GetCurrentStats(),
 		}
 		tmpl.Execute(w, data)
 	}
@@ -247,5 +250,6 @@ type PageData struct {
 
 	Uptime time.Duration
 
-	StateData stats.StatsData
+	StateData    stats.StatsData
+	MCPStateData stats.StatsData
 }

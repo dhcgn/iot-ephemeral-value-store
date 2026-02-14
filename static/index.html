@@ -140,7 +140,7 @@
             <li><strong>Data retention:</strong> {{.DataRetention}}</li>
         </ul>
 
-        <h2>Server Stats</h2>
+        <h2>Server Stats (REST API)</h2>
         <ul>
             <li><strong>Uptime:</strong> {{.Uptime}}</li>
             <li><strong>Download/Upload Count since Start:</strong> {{.StateData.DownloadCount}}/{{.StateData.UploadCount}}</li>
@@ -148,6 +148,14 @@
             <li><strong>HTTP Error Count since Start:</strong> {{.StateData.HTTPErrorCount}}</li>
             <li><strong>HTTP Error Count last 24h:</strong> {{.StateData.Last24hHTTPErrorCount}}</li>
             <li><strong>Rate Limit Hit Count:</strong> {{.StateData.RateLimitHitCount}}</li>
+        </ul>
+
+        <h2>Server Stats (MCP)</h2>
+        <ul>
+            <li><strong>Download/Upload Count since Start:</strong> {{.MCPStateData.DownloadCount}}/{{.MCPStateData.UploadCount}}</li>
+            <li><strong>Download/Upload Count last 24h:</strong> {{.MCPStateData.Last24hDownloadCount}}/{{.MCPStateData.Last24hUploadCount}}</li>
+            <li><strong>HTTP Error Count since Start:</strong> {{.MCPStateData.HTTPErrorCount}}</li>
+            <li><strong>HTTP Error Count last 24h:</strong> {{.MCPStateData.Last24hHTTPErrorCount}}</li>
         </ul>
         
         <h2>Rate Limit Stats</h2>
