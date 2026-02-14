@@ -22,4 +22,4 @@ iot-ephemeral-value-store
 go.work
 
 /data
-/build
+/buildcoverage.txt
