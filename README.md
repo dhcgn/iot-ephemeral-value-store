@@ -20,11 +20,41 @@ The separation of upload and download keys means you can safely share read-only 
 
 - **Simple HTTP GET**: All operations work with GET requests - compatible with simple IoT devices
 - **Key Pair System**: Separate upload (write) and download (read) keys for security
+- **Optional Key Prefixes**: Upload keys have `u_` prefix, download keys have `d_` prefix for easy identification
 - **JSON & Plain Text**: Download data in JSON format or as individual plain text values
 - **Patch Feature**: Combine multiple uploads into nested JSON structures
 - **Auto Expiration**: Data automatically deleted after configured duration (e.g., 24h)
 - **Web Viewer**: Built-in web interface to monitor keys in real-time
 - **No Database Setup**: Embedded BadgerDB - just run the binary
+
+## Understanding Keys
+
+### Key Prefixes (Optional)
+
+To help distinguish between upload and download keys, the system adds optional prefixes:
+- **Upload keys**: Start with `u_` (e.g., `u_f0cc4756b9b01bc9...`)
+- **Download keys**: Start with `d_` (e.g., `d_2647b0c1b03c6885...`)
+
+These prefixes are **completely optional**. Keys without prefixes continue to work for backward compatibility. You can use either format:
+- **With prefix**: `https://iot.hdev.io/u/u_f0cc4756.../`
+- **Without prefix**: `https://iot.hdev.io/u/f0cc4756.../`
+
+Both formats are equivalent and work identically. The prefix is purely for human readability and doesn't affect functionality.
+
+### Key Generation
+
+When you request a new key pair from `/kp`, you receive both keys with prefixes:
+```json
+{
+  "upload-key": "u_f0cc4756b9b01bc942866c171fb6b49113165a9740eae38e4525bd56782b5366",
+  "download-key": "d_2647b0c1b03c6885daa32f0e6d231c5a21d321ed737a2a20aa96b545c093dbed"
+}
+```
+
+The download key is cryptographically derived from the upload key using SHA256, ensuring:
+- You cannot derive the upload key from a download key (one-way)
+- The same upload key always produces the same download key
+- Upload and download operations are securely separated
 
 ## Quick Start Example
 
@@ -34,18 +64,26 @@ curl https://iot.hdev.io/kp
 ```
 ```json
 {
-  "upload-key": "abb0c54c...",
-  "download-key": "233e9c1f..."
+  "upload-key": "u_abb0c54c...",
+  "download-key": "d_233e9c1f..."
 }
 ```
 
 **2. Upload data (from IoT device):**
 ```bash
+# With prefix (recommended for clarity)
+curl "https://iot.hdev.io/u/u_abb0c54c.../?tempC=23.5&humidity=45"
+
+# Or without prefix (backward compatible)
 curl "https://iot.hdev.io/u/abb0c54c.../?tempC=23.5&humidity=45"
 ```
 
 **3. Download data (from application):**
 ```bash
+# With prefix
+curl https://iot.hdev.io/d/d_233e9c1f.../json
+
+# Or without prefix
 curl https://iot.hdev.io/d/233e9c1f.../json
 ```
 ```json
