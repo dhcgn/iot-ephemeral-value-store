@@ -21,23 +21,23 @@ type ToolDescriptor struct {
 // toolRegistry defines all available tools with their metadata
 var toolRegistry = []ToolDescriptor{
 	{
-		Name: "generate_key_pair",
+		Name:        "generate_key_pair",
 		Description: "Generate a new upload/download key pair for the IoT ephemeral value store. The upload key is used to store data (must be kept secret), and the download key is used to retrieve data (can be shared for read-only access). Keys are cryptographically linked - the download key is derived from the upload key using SHA256.",
 	},
 	{
-		Name: "upload_data",
+		Name:        "upload_data",
 		Description: "Upload data to the IoT ephemeral value store using an upload key. This operation REPLACES any existing data for this key with the new data. All parameters are stored with an automatic timestamp. Use this for initial data uploads or complete replacements. For merging with existing data, use patch_data instead.",
 	},
 	{
-		Name: "patch_data",
+		Name:        "patch_data",
 		Description: "Merge new data with existing data in the IoT ephemeral value store. This operation MERGES the new parameters with existing data rather than replacing it. You can specify a nested path (e.g., 'living_room/sensors') to organize data hierarchically. Perfect for multiple IoT devices updating different parts of a shared data structure. Each update includes an automatic timestamp.",
 	},
 	{
-		Name: "download_data",
+		Name:        "download_data",
 		Description: "Download data from the IoT ephemeral value store using a download key. You can retrieve all data as a JSON object, or specify a parameter path (e.g., 'temp' or 'living_room/temp') to get a specific value. The download key is read-only and cannot be used to modify data. Supports nested parameter paths using '/' separator.",
 	},
 	{
-		Name: "delete_data",
+		Name:        "delete_data",
 		Description: "Delete all data associated with an upload key from the IoT ephemeral value store. This permanently removes all stored values for this key. Note that data is automatically deleted after the configured retention period (default: 24 hours), so manual deletion is optional. Requires the upload key (not the download key).",
 	},
 }
