@@ -152,6 +152,17 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, stats *stats.Sta
 
 	r.HandleFunc("/kp", hhc.KeyPairHandler).Methods("GET")
 
+	// Static files that need explicit handling before legacy routes
+	r.HandleFunc("/llm.txt", func(w http.ResponseWriter, r *http.Request) {
+		content, err := staticFiles.ReadFile("static/llm.txt")
+		if err != nil {
+			http.Error(w, "File not found", http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Write(content)
+	}).Methods("GET")
+
 	// Viewer page
 	r.HandleFunc("/viewer", viewerHandler())
 
