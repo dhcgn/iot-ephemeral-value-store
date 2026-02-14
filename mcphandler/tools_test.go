@@ -102,7 +102,9 @@ func TestUploadDataHandler(t *testing.T) {
 	}
 
 	var dataMap map[string]interface{}
-	json.Unmarshal(storedData, &dataMap)
+	if err := json.Unmarshal(storedData, &dataMap); err != nil {
+		t.Fatalf("Failed to unmarshal stored data: %v", err)
+	}
 
 	if dataMap["temp"] != "23.5" {
 		t.Errorf("Expected temp=23.5, got %v", dataMap["temp"])
@@ -169,7 +171,9 @@ func TestPatchDataHandler(t *testing.T) {
 	}
 
 	var dataMap map[string]interface{}
-	json.Unmarshal(storedData, &dataMap)
+	if err := json.Unmarshal(storedData, &dataMap); err != nil {
+		t.Fatalf("Failed to unmarshal stored data: %v", err)
+	}
 
 	// Check nested structure
 	room1, ok := dataMap["room1"].(map[string]interface{})

@@ -61,7 +61,10 @@ func (c Config) GenerateKeyPairHandler(ctx context.Context, req *mcp.CallToolReq
 		"message":      "Key pair generated successfully. Use the upload key to store data and the download key to retrieve it. The upload key must be kept secret.",
 	}
 
-	resultJSON, _ := json.MarshalIndent(result, "", "  ")
+	resultJSON, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return nil, nil, fmt.Errorf("error marshaling result: %w", err)
+	}
 
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{
@@ -115,7 +118,10 @@ func (c Config) UploadDataHandler(ctx context.Context, req *mcp.CallToolRequest,
 		"parameter_count": len(params.Parameters),
 	}
 
-	resultJSON, _ := json.MarshalIndent(result, "", "  ")
+	resultJSON, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return nil, nil, fmt.Errorf("error marshaling result: %w", err)
+	}
 
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{
@@ -194,7 +200,10 @@ func (c Config) PatchDataHandler(ctx context.Context, req *mcp.CallToolRequest, 
 		"parameter_count": len(params.Parameters),
 	}
 
-	resultJSON, _ := json.MarshalIndent(result, "", "  ")
+	resultJSON, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return nil, nil, fmt.Errorf("error marshaling result: %w", err)
+	}
 
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{
@@ -259,7 +268,10 @@ func (c Config) DownloadDataHandler(ctx context.Context, req *mcp.CallToolReques
 		}
 	}
 
-	resultJSON, _ := json.MarshalIndent(result, "", "  ")
+	resultJSON, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return nil, nil, fmt.Errorf("error marshaling result: %w", err)
+	}
 
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{
@@ -297,7 +309,10 @@ func (c Config) DeleteDataHandler(ctx context.Context, req *mcp.CallToolRequest,
 		"success": true,
 	}
 
-	resultJSON, _ := json.MarshalIndent(result, "", "  ")
+	resultJSON, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return nil, nil, fmt.Errorf("error marshaling result: %w", err)
+	}
 
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{

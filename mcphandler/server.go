@@ -79,5 +79,7 @@ func (m *MCPServer) handleInfoRequest(w http.ResponseWriter, r *http.Request) {
 		"transport": "HTTP Streamable (SSE)",
 		"usage":     "Send POST requests to interact with the server. See documentation at /llm.txt",
 	}
-	json.NewEncoder(w).Encode(info)
+	if err := json.NewEncoder(w).Encode(info); err != nil {
+		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+	}
 }
