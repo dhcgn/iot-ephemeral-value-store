@@ -1,4 +1,4 @@
-FROM golang:1.25-alpine AS builder
+FROM golang:1.26-alpine AS builder
 WORKDIR /app
 
 # Define build arguments
@@ -16,7 +16,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags "\
     -X main.BuildTime=${BUILDTIME}" \
     -o iot-ephemeral-value-store-server main.go
 
-FROM gcr.io/distroless/static-debian12
+FROM gcr.io/distroless/static-debian13
 WORKDIR /app
 COPY --from=builder /app/iot-ephemeral-value-store-server /app/
 EXPOSE 8080
