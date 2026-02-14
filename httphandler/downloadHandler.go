@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/dhcgn/iot-ephemeral-value-store/domain"
 	"github.com/gorilla/mux"
 )
 
@@ -20,6 +21,9 @@ func (c Config) downloadPlainHandler(w http.ResponseWriter, r *http.Request, bas
 	vars := mux.Vars(r)
 	downloadKey := vars["downloadKey"]
 	param := vars["param"]
+
+	// Strip the optional "d_" prefix from the download key
+	downloadKey = domain.StripDownloadPrefix(downloadKey)
 
 	jsonData, err := c.StorageInstance.GetJSON(downloadKey)
 	if err != nil {
@@ -99,6 +103,9 @@ func (c Config) DownloadJsonHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	downloadKey := vars["downloadKey"]
 
+	// Strip the optional "d_" prefix from the download key
+	downloadKey = domain.StripDownloadPrefix(downloadKey)
+
 	jsonData, err := c.StorageInstance.GetJSON(downloadKey)
 	if err != nil {
 		c.StatsInstance.IncrementHTTPErrors()
@@ -122,6 +129,9 @@ func (c Config) DownloadBase64Handler(w http.ResponseWriter, r *http.Request) {
 func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	downloadKey := vars["downloadKey"]
+
+	// Strip the optional "d_" prefix from the download key
+	downloadKey = domain.StripDownloadPrefix(downloadKey)
 
 	jsonData, err := c.StorageInstance.GetJSON(downloadKey)
 	if err != nil {

@@ -16,8 +16,8 @@ func (c Config) KeyPairHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := map[string]string{
-		"upload-key":   uploadKey,
-		"download-key": downloadKey,
+		"upload-key":   domain.AddUploadPrefix(uploadKey),
+		"download-key": domain.AddDownloadPrefix(downloadKey),
 	}
 	jsonResponse(w, response)
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/dhcgn/iot-ephemeral-value-store/domain"
@@ -73,13 +74,25 @@ func Test_KeyPairHandler(t *testing.T) {
 				t.Errorf("Download key is empty")
 			}
 
+			// Check that upload key has the u_ prefix
+			if !strings.HasPrefix(uploadKey, domain.UploadKeyPrefix) {
+				t.Errorf("Upload key does not have the expected prefix 'u_': %s", uploadKey)
+			}
+
+			// Check that download key has the d_ prefix
+			if !strings.HasPrefix(downloadKey, domain.DownloadKeyPrefix) {
+				t.Errorf("Download key does not have the expected prefix 'd_': %s", downloadKey)
+			}
+
 			// Check if download key is derived correctly from upload key
 			derivedDownloadKey, err := domain.DeriveDownloadKey(uploadKey)
 			if err != nil {
 				t.Errorf("Failed to derive download key: %v", err)
 			}
-			if derivedDownloadKey != downloadKey {
-				t.Errorf("Derived download key does not match: got \"%v\" want \"%v\"", derivedDownloadKey, downloadKey)
+			// Add the prefix to the derived key for comparison
+			derivedDownloadKeyWithPrefix := domain.AddDownloadPrefix(derivedDownloadKey)
+			if derivedDownloadKeyWithPrefix != downloadKey {
+				t.Errorf("Derived download key does not match: got \"%v\" want \"%v\"", derivedDownloadKeyWithPrefix, downloadKey)
 			}
 		})
 	}

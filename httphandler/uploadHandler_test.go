@@ -67,6 +67,27 @@ func Test_UploadHandler(t *testing.T) {
 			expectedHTTPErrorCount: 0,
 			expectedUploadCount:    1,
 		},
+		{
+			name: "UploadHandler - valid upload key with u_ prefix",
+			c: Config{
+				StatsInstance:   stats.NewStats(),
+				StorageInstance: storage.NewInMemoryStorage(),
+			},
+			args: args{
+				w: httptest.NewRecorder(),
+				r: func() *http.Request {
+					req, _ := http.NewRequest("POST", "/upload/u_7790e6a7c72e97c2493334f7b22ffbaa2a41fc53a95268a4fbb45a9c34d9c5d1?param1=value1", nil)
+					vars := map[string]string{
+						"uploadKey": "u_7790e6a7c72e97c2493334f7b22ffbaa2a41fc53a95268a4fbb45a9c34d9c5d1",
+					}
+					return mux.SetURLVars(req, vars)
+				}(),
+			},
+			expectedStatus:         http.StatusOK,
+			expectedBodyContains:   []string{"Data uploaded successfully", "download_url", "parameter_urls"},
+			expectedHTTPErrorCount: 0,
+			expectedUploadCount:    1,
+		},
 	}
 
 	for _, tt := range tests {
@@ -144,6 +165,28 @@ func Test_UploadAndPatchHandler(t *testing.T) {
 					req, _ := http.NewRequest("PATCH", "/upload/0143a8a24c3b364ce4df085579601d9f2408f5e93f851078b3f5e4088eb13220/param?value=newvalue", nil)
 					vars := map[string]string{
 						"uploadKey": "0143a8a24c3b364ce4df085579601d9f2408f5e93f851078b3f5e4088eb13220",
+						"param":     "param",
+					}
+					return mux.SetURLVars(req, vars)
+				}(),
+			},
+			expectedStatus:         http.StatusOK,
+			expectedBodyContains:   []string{"Data uploaded successfully", "download_url", "parameter_urls"},
+			expectedHTTPErrorCount: 0,
+			expectedUploadCount:    1,
+		},
+		{
+			name: "UploadAndPatchHandler - valid upload key with u_ prefix",
+			c: Config{
+				StatsInstance:   stats.NewStats(),
+				StorageInstance: storage.NewInMemoryStorage(),
+			},
+			args: args{
+				w: httptest.NewRecorder(),
+				r: func() *http.Request {
+					req, _ := http.NewRequest("PATCH", "/upload/u_0143a8a24c3b364ce4df085579601d9f2408f5e93f851078b3f5e4088eb13220/param?value=newvalue", nil)
+					vars := map[string]string{
+						"uploadKey": "u_0143a8a24c3b364ce4df085579601d9f2408f5e93f851078b3f5e4088eb13220",
 						"param":     "param",
 					}
 					return mux.SetURLVars(req, vars)
