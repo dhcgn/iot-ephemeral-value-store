@@ -1,0 +1,282 @@
+# IoT Ephemeral Value Store - MCP Server
+
+> Model Context Protocol (MCP) enabled ephemeral key-value store for IoT sensor data
+
+## Overview
+
+This server provides a lightweight, temporary storage solution for IoT sensor data through both REST APIs and the Model Context Protocol (MCP). It's designed for IoT devices that can only make simple HTTP calls, while also providing advanced programmatic access through MCP.
+
+**Key Features:**
+- **Ephemeral Storage**: Data automatically expires after a configurable period (default: 24 hours)
+- **Key-Based Security**: Separate upload (write) and download (read) keys
+- **Dual Interface**: REST API for IoT devices, MCP for programmatic access
+- **Nested Data**: Support for hierarchical data structures via patch operations
+- **Zero Config**: Embedded database, no setup required
+
+## MCP Endpoint
+
+**URL**: `/mcp`
+**Protocol**: HTTP JSON-RPC 2.0
+**Method**: POST
+
+The MCP endpoint exposes all server functionality through a standardized protocol that LLMs and AI assistants can interact with directly.
+
+### Available Tools
+
+#### 1. `generate_key_pair`
+Generate a new upload/download key pair.
+
+**Input**: None
+
+**Output**:
+```json
+{
+  "upload_key": "64-character hex string",
+  "download_key": "64-character hex string (SHA256 of upload key)",
+  "upload_url": "Example upload URL",
+  "download_url": "Example download URL",
+  "message": "Instructions"
+}
+```
+
+**Security**: The upload key is used for write operations and must be kept secret. The download key is derived from the upload key using SHA256 and provides read-only access.
+
+---
+
+#### 2. `upload_data`
+Upload data, replacing any existing data for this key.
+
+**Input**:
+```json
+{
+  "upload_key": "64-character hex string",
+  "parameters": {
+    "key1": "value1",
+    "key2": "value2"
+  }
+}
+```
+
+**Output**:
+```json
+{
+  "message": "Data uploaded successfully",
+  "download_url": "JSON download URL",
+  "parameter_urls": {
+    "key1": "Plain text URL for key1",
+    "key2": "Plain text URL for key2"
+  },
+  "parameter_count": 2
+}
+```
+
+**Note**: This operation REPLACES all existing data. An automatic `timestamp` field is added to all uploads.
+
+---
+
+#### 3. `patch_data`
+Merge new data with existing data (does not replace).
+
+**Input**:
+```json
+{
+  "upload_key": "64-character hex string",
+  "path": "optional/nested/path",
+  "parameters": {
+    "key1": "value1",
+    "key2": "value2"
+  }
+}
+```
+
+**Output**:
+```json
+{
+  "message": "Data merged successfully",
+  "download_url": "JSON download URL",
+  "parameter_urls": { ... },
+  "path": "The path where data was merged",
+  "parameter_count": 2
+}
+```
+
+**Use Case**: Perfect for multiple IoT devices updating different parts of a shared data structure. For example:
+- Device 1: `patch_data` with `path="living_room"`, `parameters={"temp":"22"}`
+- Device 2: `patch_data` with `path="bedroom"`, `parameters={"temp":"20"}`
+- Result: Nested JSON structure with both rooms
+
+---
+
+#### 4. `download_data`
+Download data using the download key.
+
+**Input**:
+```json
+{
+  "download_key": "64-character hex string",
+  "parameter": "optional/nested/parameter/path"
+}
+```
+
+**Output**:
+```json
+{
+  "data": "Full JSON object or specific value",
+  "parameter": "The parameter requested (if any)",
+  "message": "Description"
+}
+```
+
+**Examples**:
+- No `parameter`: Returns entire JSON object
+- `parameter="temp"`: Returns just the temperature value
+- `parameter="living_room/temp"`: Returns nested value
+
+---
+
+#### 5. `delete_data`
+Delete all data associated with an upload key.
+
+**Input**:
+```json
+{
+  "upload_key": "64-character hex string"
+}
+```
+
+**Output**:
+```json
+{
+  "message": "Data deleted successfully",
+  "success": true
+}
+```
+
+**Note**: Data automatically expires after the retention period, so manual deletion is optional.
+
+---
+
+## REST API (for IoT Devices)
+
+The server also provides a simple REST API compatible with basic IoT devices:
+
+### Key Operations
+
+| Operation | Endpoint | Example |
+|-----------|----------|---------|
+| Create key pair | `GET /kp` | `curl http://server:8080/kp` |
+| Upload data | `GET /u/{uploadKey}?param=value` | `curl "http://server:8080/u/abc.../?temp=23.5"` |
+| Patch data | `GET /patch/{uploadKey}/path?param=value` | `curl "http://server:8080/patch/abc.../room1?temp=22"` |
+| Download JSON | `GET /d/{downloadKey}/json` | `curl http://server:8080/d/def.../json` |
+| Download param | `GET /d/{downloadKey}/plain/{param}` | `curl http://server:8080/d/def.../plain/temp` |
+| Delete data | `GET /delete/{uploadKey}` | `curl http://server:8080/delete/abc...` |
+
+## Architecture
+
+**Storage**: BadgerDB (embedded key-value store)
+**Transport**: HTTP/HTTPS
+**Keys**: 256-bit cryptographically secure random keys
+**Download Key Derivation**: SHA256(upload_key)
+**Data Format**: JSON (internally), JSON or plain text (download)
+
+## Use Cases
+
+### IoT Sensor Networks
+- ESP32/ESP8266 devices uploading sensor readings
+- Shelly smart home devices reporting status
+- Raspberry Pi monitoring systems
+- Any device with HTTP GET capability
+
+### Home Automation
+- Bridge between Home Assistant and external applications
+- Mobile app data synchronization
+- Real-time sensor monitoring dashboards
+- Temporary data exchange between services
+
+### Development & Testing
+- Quick prototyping of IoT solutions
+- Testing sensor integrations
+- Data bridging during development
+- Temporary API endpoints
+
+## Configuration
+
+**Command Line Options**:
+- `-persist-values-for`: Data retention duration (default: "24h")
+  - Examples: "1h", "30m", "48h", "7d"
+- `-store`: Storage directory path (default: "./data")
+- `-port`: Server port (default: 8080)
+
+**Docker**:
+```bash
+docker run -p 8080:8080 \
+  -v /path/to/data:/data \
+  dhcgn/iot-ephemeral-value-store-server \
+  -persist-values-for 48h -store /data
+```
+
+## Security Considerations
+
+1. **Key Separation**: Upload keys have write access, download keys are read-only
+2. **Key Storage**: Never expose upload keys in public URLs or logs
+3. **HTTPS**: Use HTTPS in production to protect keys in transit
+4. **Ephemeral**: Data is temporary - not suitable for long-term storage
+5. **Rate Limiting**: Built-in rate limiting (100 req/sec, burst 10)
+6. **Request Size**: Limited to 10KB to prevent abuse
+
+## MCP Client Example
+
+Using the MCP protocol from an AI assistant or programmatic client:
+
+```json
+POST /mcp HTTP/1.1
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "generate_key_pair",
+    "arguments": {}
+  }
+}
+```
+
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"upload_key\": \"...\",\n  \"download_key\": \"...\"\n}"
+      }
+    ]
+  }
+}
+```
+
+## Web Interface
+
+- **Home Page** (`/`): Getting started guide, server stats, live examples
+- **Viewer** (`/viewer`): Real-time monitoring tool for multiple keys
+- **MCP Info** (`GET /mcp`): MCP server capabilities and information
+
+## Links
+
+- **GitHub**: https://github.com/dhcgn/iot-ephemeral-value-store
+- **Docker Hub**: https://hub.docker.com/r/dhcgn/iot-ephemeral-value-store-server
+- **MCP Protocol**: https://modelcontextprotocol.io/
+
+## License
+
+MIT License - See GitHub repository for details
+
+---
+
+**Version**: 1.0.0  
+**MCP Protocol Version**: 2024-11-05  
+**Last Updated**: 2024

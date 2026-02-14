@@ -13,6 +13,7 @@ import (
 
 	"github.com/dhcgn/iot-ephemeral-value-store/domain"
 	"github.com/dhcgn/iot-ephemeral-value-store/httphandler"
+	"github.com/dhcgn/iot-ephemeral-value-store/mcphandler"
 	"github.com/dhcgn/iot-ephemeral-value-store/middleware"
 	"github.com/dhcgn/iot-ephemeral-value-store/stats"
 	"github.com/dhcgn/iot-ephemeral-value-store/storage"
@@ -136,6 +137,18 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, stats *stats.Sta
 	r.Use(mc.EnableCORS)
 	r.Use(mc.LimitRequestSize)
 	r.Use(mc.RateLimit)
+
+	// MCP endpoint - create MCP server
+	mcpConfig := mcphandler.Config{
+		StorageInstance: hhc.StorageInstance,
+		StatsInstance:   hhc.StatsInstance,
+		ServerHost:      fmt.Sprintf("http://localhost:%d", port),
+	}
+	mcpServer, err := mcphandler.NewMCPServer(mcpConfig)
+	if err != nil {
+		log.Fatal("Error creating MCP server:", err)
+	}
+	r.HandleFunc("/mcp", mcpServer.ServeHTTP).Methods("GET", "POST")
 
 	r.HandleFunc("/kp", hhc.KeyPairHandler).Methods("GET")
 
