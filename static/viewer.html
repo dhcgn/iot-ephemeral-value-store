@@ -997,6 +997,7 @@
         // Show curl command modal with upload key
         function showUploadCurl(uploadKey) {
             const serverUrl = window.location.origin;
+            // Note: This API uses GET requests for uploads (by design, to support simple IoT devices)
             const curlCommand = `curl "${serverUrl}/u/${uploadKey}/?temperature=25&humidity=60"`;
             
             document.getElementById('curlCommand').textContent = curlCommand;
@@ -1021,7 +1022,8 @@
                     successMsg.classList.remove('show');
                 }, 3000);
             } catch (err) {
-                // Fallback for older browsers
+                // Fallback for older browsers (using deprecated execCommand)
+                // Note: execCommand is deprecated but necessary for older browser support
                 const textArea = document.createElement('textarea');
                 textArea.value = curlCommand;
                 textArea.style.position = 'fixed';
