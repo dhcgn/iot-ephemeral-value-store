@@ -350,10 +350,126 @@
                 justify-content: flex-start;
             }
         }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 90%;
+            animation: slideDown 0.3s;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            color: #667eea;
+            margin: 0;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #667eea;
+        }
+
+        .curl-command {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            word-break: break-all;
+            margin: 15px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .copy-success {
+            color: #28a745;
+            font-weight: 600;
+            margin-right: auto;
+            display: flex;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .copy-success.show {
+            opacity: 1;
+        }
     </style>
 </head>
 
 <body>
+    <!-- Modal for curl command -->
+    <div id="curlModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📤 Upload Data with curl</h2>
+                <span class="close" onclick="closeCurlModal()">&times;</span>
+            </div>
+            <p>Use this curl command to upload data to this key. Replace the parameter names and values with your own.</p>
+            <div class="curl-command" id="curlCommand"></div>
+            <div class="modal-actions">
+                <span class="copy-success" id="copySuccess">✓ Copied to clipboard!</span>
+                <button class="btn btn-secondary" onclick="closeCurlModal()">Close</button>
+                <button class="btn btn-primary" onclick="copyCurlCommand()">📋 Copy to Clipboard</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <div class="header">
             <h1>🔍 IoT Ephemeral Value Store Viewer</h1>
@@ -640,7 +756,7 @@
                 } else if (response.status === 404) {
                     keyObj.data = null;
                     keyObj.status = 'error';
-                    keyObj.error = 'No data found (404)';
+                    keyObj.error = 'No data found (404) - Nothing has been uploaded yet';
                 } else {
                     keyObj.status = 'error';
                     keyObj.error = `HTTP ${response.status}`;
@@ -755,6 +871,9 @@
                             <button class="btn btn-primary btn-small" onclick="fetchKeyDataFromElement(this)">
                                 🔄 Refresh
                             </button>
+                            <button class="btn btn-success btn-small" onclick="showUploadCurlFromElement(this)">
+                                📤 Upload
+                            </button>
                             <button class="btn btn-danger btn-small" onclick="removeKeyFromElement(this)">
                                 🗑️ Remove
                             </button>
@@ -854,6 +973,81 @@
             const div = document.createElement('div');
             div.textContent = String(text);
             return div.innerHTML;
+        }
+
+        // Show upload curl command modal
+        function showUploadCurlFromElement(button) {
+            const keyItem = button.closest('.key-item');
+            const downloadKey = keyItem.dataset.downloadKey;
+            const keyObj = watchedKeys.find(k => k.downloadKey === downloadKey);
+            
+            if (!keyObj) {
+                alert('Key not found');
+                return;
+            }
+
+            if (!keyObj.uploadKey) {
+                alert('Upload key is not available for this download key.\n\nYou can only generate upload commands for keys that were created using the "Create New Key Pair" button.');
+                return;
+            }
+
+            showUploadCurl(keyObj.uploadKey);
+        }
+
+        // Show curl command modal with upload key
+        function showUploadCurl(uploadKey) {
+            const serverUrl = window.location.origin;
+            const curlCommand = `curl "${serverUrl}/u/${uploadKey}/?param1=value1&param2=value2"`;
+            
+            document.getElementById('curlCommand').textContent = curlCommand;
+            document.getElementById('curlModal').style.display = 'block';
+            document.getElementById('copySuccess').classList.remove('show');
+        }
+
+        // Close curl modal
+        function closeCurlModal() {
+            document.getElementById('curlModal').style.display = 'none';
+        }
+
+        // Copy curl command to clipboard
+        async function copyCurlCommand() {
+            const curlCommand = document.getElementById('curlCommand').textContent;
+            
+            try {
+                await navigator.clipboard.writeText(curlCommand);
+                const successMsg = document.getElementById('copySuccess');
+                successMsg.classList.add('show');
+                setTimeout(() => {
+                    successMsg.classList.remove('show');
+                }, 3000);
+            } catch (err) {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = curlCommand;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-9999px';
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    const successMsg = document.getElementById('copySuccess');
+                    successMsg.classList.add('show');
+                    setTimeout(() => {
+                        successMsg.classList.remove('show');
+                    }, 3000);
+                } catch (err) {
+                    alert('Failed to copy to clipboard');
+                }
+                document.body.removeChild(textArea);
+            }
+        }
+
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            const modal = document.getElementById('curlModal');
+            if (event.target === modal) {
+                closeCurlModal();
+            }
         }
     </script>
 </body>
