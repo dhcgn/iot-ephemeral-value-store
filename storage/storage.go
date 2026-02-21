@@ -3,13 +3,31 @@ package storage
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/dgraph-io/badger/v3"
 )
+
+// badgerSlogLogger bridges badger's Logger interface to slog.
+type badgerSlogLogger struct{}
+
+func (badgerSlogLogger) Errorf(format string, args ...interface{}) {
+	slog.Error(fmt.Sprintf("badger: "+format, args...))
+}
+func (badgerSlogLogger) Warningf(format string, args ...interface{}) {
+	slog.Warn(fmt.Sprintf("badger: "+format, args...))
+}
+func (badgerSlogLogger) Infof(format string, args ...interface{}) {
+	slog.Info(fmt.Sprintf("badger: "+format, args...))
+}
+func (badgerSlogLogger) Debugf(format string, args ...interface{}) {
+	slog.Debug(fmt.Sprintf("badger: "+format, args...))
+}
 
 type StorageInstance struct {
 	Db              *badger.DB
@@ -24,7 +42,7 @@ type Storage interface {
 }
 
 func NewInMemoryStorage() StorageInstance {
-	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true))
+	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true).WithLogger(badgerSlogLogger{}))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -49,7 +67,7 @@ func NewPersistentStorage(storePath string, persistDuration time.Duration) Stora
 		}
 	}
 
-	db, err := badger.Open(badger.DefaultOptions(absStorePath))
+	db, err := badger.Open(badger.DefaultOptions(absStorePath).WithLogger(badgerSlogLogger{}))
 	if err != nil {
 		log.Fatal(err)
 	}
