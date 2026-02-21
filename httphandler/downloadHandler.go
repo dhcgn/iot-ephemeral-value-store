@@ -25,7 +25,7 @@ func (c Config) downloadPlainHandler(w http.ResponseWriter, r *http.Request, bas
 
 	jsonData, err := c.DataService.DownloadJSON(downloadKey)
 	if err != nil {
-		slog.Error("download plain: failed to retrieve data", "error", err, "method", r.Method, "path", r.URL.Path)
+		slog.Debug("download plain: failed to retrieve data", "error", err, "method", r.Method, "path", r.URL.Path)
 		c.StatsInstance.IncrementHTTPErrors()
 		http.Error(w, "Invalid download key or database error", http.StatusNotFound)
 		return
@@ -41,7 +41,7 @@ func (c Config) downloadPlainHandler(w http.ResponseWriter, r *http.Request, bas
 
 	value, err := data.TraverseField(paramMap, param)
 	if err != nil {
-		slog.Error("download plain: parameter not found", "error", err, "param", param, "method", r.Method, "path", r.URL.Path)
+		slog.Debug("download plain: parameter not found", "error", err, "param", param, "method", r.Method, "path", r.URL.Path)
 		c.StatsInstance.IncrementHTTPErrors()
 		if strings.Contains(err.Error(), "not found") {
 			http.Error(w, "Parameter not found", http.StatusNotFound)
@@ -97,7 +97,7 @@ func (c Config) DownloadJsonHandler(w http.ResponseWriter, r *http.Request) {
 
 	jsonData, err := c.DataService.DownloadJSON(downloadKey)
 	if err != nil {
-		slog.Error("download JSON: failed to retrieve data", "error", err, "method", r.Method, "path", r.URL.Path)
+		slog.Debug("download JSON: failed to retrieve data", "error", err, "method", r.Method, "path", r.URL.Path)
 		c.StatsInstance.IncrementHTTPErrors()
 		http.Error(w, "Invalid download key or database error", http.StatusNotFound)
 		return
@@ -122,7 +122,7 @@ func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
 
 	jsonData, err := c.DataService.DownloadJSON(downloadKey)
 	if err != nil {
-		slog.Error("download root: failed to retrieve data", "error", err, "method", r.Method, "path", r.URL.Path)
+		slog.Debug("download root: failed to retrieve data", "error", err, "method", r.Method, "path", r.URL.Path)
 		c.StatsInstance.IncrementHTTPErrors()
 		http.Error(w, "Invalid download key or database error", http.StatusNotFound)
 		return
