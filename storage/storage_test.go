@@ -2,6 +2,7 @@
 package storage
 
 import (
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -171,4 +172,56 @@ func TestStoreJSONEncodingError(t *testing.T) {
 			t.Errorf("Expected error 'error encoding data to JSON', got %v", err)
 		}
 	})
+}
+
+func TestNewPersistentStorage(t *testing.T) {
+	dir, err := os.MkdirTemp("", "persistent-storage-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	t.Cleanup(func() { os.RemoveAll(dir) })
+
+	duration := 5 * time.Minute
+	storage := NewPersistentStorage(dir, duration)
+	defer storage.Db.Close()
+
+	if storage.Db == nil {
+		t.Fatal("Expected non-nil database")
+	}
+	if storage.PersistDuration != duration {
+		t.Errorf("Expected persist duration %v, got %v", duration, storage.PersistDuration)
+	}
+
+	// Verify the storage is functional by storing and retrieving data
+	key := "persistent_test_key"
+	data := map[string]interface{}{"value": "42"}
+
+	if err := storage.Store(key, data); err != nil {
+		t.Fatalf("Failed to store data: %v", err)
+	}
+
+	retrieved, err := storage.Retrieve(key)
+	if err != nil {
+		t.Fatalf("Failed to retrieve data: %v", err)
+	}
+	if retrieved["value"] != "42" {
+		t.Errorf("Expected value=42, got %v", retrieved["value"])
+	}
+}
+
+func TestNewPersistentStorage_createsDirectory(t *testing.T) {
+	parent, err := os.MkdirTemp("", "persistent-storage-parent-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	t.Cleanup(func() { os.RemoveAll(parent) })
+
+	// Use a subdirectory that does not yet exist
+	storePath := parent + "/subdir/data"
+	storage := NewPersistentStorage(storePath, time.Minute)
+	defer storage.Db.Close()
+
+	if _, err := os.Stat(storePath); os.IsNotExist(err) {
+		t.Errorf("Expected directory %q to be created", storePath)
+	}
 }
