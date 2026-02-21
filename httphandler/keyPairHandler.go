@@ -2,6 +2,8 @@ package httphandler
 
 import (
 	"net/http"
+
+	"github.com/dhcgn/iot-ephemeral-value-store/domain"
 )
 
 func (c Config) KeyPairHandler(w http.ResponseWriter, r *http.Request) {
@@ -13,8 +15,8 @@ func (c Config) KeyPairHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := map[string]string{
-		"upload-key":   uploadKey,
-		"download-key": downloadKey,
+		"upload-key":   domain.AddUploadPrefix(uploadKey),
+		"download-key": domain.AddDownloadPrefix(downloadKey),
 	}
 	jsonResponse(w, response)
 }

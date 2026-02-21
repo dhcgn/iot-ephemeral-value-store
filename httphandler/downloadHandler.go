@@ -139,10 +139,10 @@ func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Collect all paths (including nested ones)
 	paths := collectAllPaths(paramMap, "")
-	
+
 	// Sort paths alphabetically for consistent ordering
 	sort.Strings(paths)
-	
+
 	var fields []FieldData
 	if len(paths) > 0 {
 		fields = make([]FieldData, 0, len(paths))
@@ -178,7 +178,7 @@ func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
 // Returns a slice of path strings in the format "key" or "parent/child" for nested values.
 func collectAllPaths(data interface{}, prefix string) []string {
 	var paths []string
-	
+
 	switch v := data.(type) {
 	case map[string]interface{}:
 		for key, value := range v {
@@ -188,7 +188,7 @@ func collectAllPaths(data interface{}, prefix string) []string {
 			} else {
 				currentPath = prefix + "/" + key
 			}
-			
+
 			// Check if the value is a nested map or a leaf value
 			if nestedMap, ok := value.(map[string]interface{}); ok {
 				// Recursively collect paths from nested maps
@@ -200,6 +200,6 @@ func collectAllPaths(data interface{}, prefix string) []string {
 			}
 		}
 	}
-	
+
 	return paths
 }

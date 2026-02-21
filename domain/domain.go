@@ -9,6 +9,33 @@ import (
 	"strings"
 )
 
+const (
+	// UploadKeyPrefix is the optional prefix for upload keys
+	UploadKeyPrefix = "u_"
+	// DownloadKeyPrefix is the optional prefix for download keys
+	DownloadKeyPrefix = "d_"
+)
+
+// StripUploadPrefix removes the optional "u_" prefix from an upload key
+func StripUploadPrefix(key string) string {
+	return strings.TrimPrefix(key, UploadKeyPrefix)
+}
+
+// StripDownloadPrefix removes the optional "d_" prefix from a download key
+func StripDownloadPrefix(key string) string {
+	return strings.TrimPrefix(key, DownloadKeyPrefix)
+}
+
+// AddUploadPrefix adds the "u_" prefix to an upload key
+func AddUploadPrefix(key string) string {
+	return UploadKeyPrefix + key
+}
+
+// AddDownloadPrefix adds the "d_" prefix to a download key
+func AddDownloadPrefix(key string) string {
+	return DownloadKeyPrefix + key
+}
+
 func GenerateRandomKey() string {
 	randomBytes := make([]byte, 256/8)
 	_, err := rand.Read(randomBytes)
@@ -19,6 +46,9 @@ func GenerateRandomKey() string {
 }
 
 func DeriveDownloadKey(uploadKey string) (string, error) {
+	// Strip the optional "u_" prefix from the upload key
+	uploadKey = StripUploadPrefix(uploadKey)
+
 	if len(uploadKey) != 64 {
 		return "", fmt.Errorf("Invalid upload key length: %d", len(uploadKey))
 	}
@@ -28,6 +58,9 @@ func DeriveDownloadKey(uploadKey string) (string, error) {
 }
 
 func ValidateUploadKey(uploadKey string) error {
+	// Strip the optional "u_" prefix
+	uploadKey = StripUploadPrefix(uploadKey)
+
 	uploadKey = strings.ToLower(uploadKey)
 	decoded, err := hex.DecodeString(uploadKey)
 	if err != nil {
