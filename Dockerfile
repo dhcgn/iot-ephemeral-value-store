@@ -19,10 +19,14 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags "\
     -X main.BuildTime=${BUILDTIME}" \
     -o iot-ephemeral-value-store-server main.go
 
+RUN mkdir /db
+
 FROM gcr.io/distroless/static-debian13
 USER nonroot:nonroot
 WORKDIR /app
 COPY --from=builder /app/iot-ephemeral-value-store-server /app/
+COPY --from=builder --chown=nonroot:nonroot /db /db
+VOLUME ["/db"]
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD ["/app/iot-ephemeral-value-store-server", "-healthcheck"]
