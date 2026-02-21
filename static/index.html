@@ -63,6 +63,23 @@
             border-radius: 4px;
         }
 
+        pre {
+            background-color: #2d2d2d;
+            color: #f8f8f2;
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        pre code {
+            background-color: transparent;
+            padding: 0;
+            border-radius: 0;
+            color: inherit;
+        }
+
         .viewer-button {
             position: fixed;
             top: 20px;
@@ -201,11 +218,11 @@
 
         <h2>MCP Server Configuration</h2>
         <p>This server supports the <a href="https://modelcontextprotocol.io/">Model Context Protocol (MCP)</a>. Add it to your MCP client (e.g. VS Code, Claude Desktop) using the following configuration:</p>
-        <pre><code id="mcp-config">{
+        <pre><code>{
   "mcpServers": {
     "IoT-Ephemeral-Value-Store-Server": {
       "type": "http",
-      "url": "<span id="mcp-url">/mcp</span>",
+      "url": "{{.BaseURL}}/mcp",
       "headers": {},
       "tools": [
         "*"
@@ -226,10 +243,6 @@
                 link.href = baseUrl + path;
                 link.textContent = baseUrl + path;
             });
-            const mcpUrlEl = document.getElementById('mcp-url');
-            if (mcpUrlEl) {
-                mcpUrlEl.textContent = baseUrl + '/mcp';
-            }
         });
     </script>
 </body>

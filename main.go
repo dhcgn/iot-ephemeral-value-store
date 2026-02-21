@@ -229,12 +229,20 @@ func templateHandler(tmpl *template.Template, restStats *stats.Stats, mcpStats *
 			http.Error(w, "Error deriving download key", http.StatusInternalServerError)
 			return
 		}
+		scheme := "http"
+		if r.TLS != nil {
+			scheme = "https"
+		} else if proto := r.Header.Get("X-Forwarded-Proto"); proto != "" {
+			scheme = proto
+		}
+		baseURL := scheme + "://" + r.Host
 		data := PageData{
 			UploadKey:     key,
 			DownloadKey:   key_down,
 			DataRetention: persistDurationString,
 			Version:       Version,
 			BuildTime:     BuildTime,
+			BaseURL:       baseURL,
 
 			Uptime: restStats.GetUptime(),
 
@@ -263,6 +271,7 @@ type PageData struct {
 	DataRetention string
 	Version       string
 	BuildTime     string
+	BaseURL       string
 
 	Uptime time.Duration
 
