@@ -84,6 +84,7 @@ func (s *Service) Patch(uploadKey string, path string, params map[string]string)
 
 // DownloadJSON retrieves the raw JSON bytes for the given download key.
 func (s *Service) DownloadJSON(downloadKey string) ([]byte, error) {
+	downloadKey = domain.StripDownloadPrefix(downloadKey)
 	jsonData, err := s.StorageInstance.GetJSON(downloadKey)
 	if err != nil {
 		return nil, fmt.Errorf("invalid download key or data not found: %w", err)
@@ -94,6 +95,7 @@ func (s *Service) DownloadJSON(downloadKey string) ([]byte, error) {
 // DownloadField retrieves a specific field from the stored data by traversing
 // the nested map using the given slash-separated field path.
 func (s *Service) DownloadField(downloadKey string, fieldPath string) (interface{}, error) {
+	downloadKey = domain.StripDownloadPrefix(downloadKey)
 	data, err := s.StorageInstance.Retrieve(downloadKey)
 	if err != nil {
 		return nil, fmt.Errorf("invalid download key or data not found: %w", err)

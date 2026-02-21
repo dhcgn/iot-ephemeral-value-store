@@ -2,6 +2,8 @@ package httphandler
 
 import (
 	"net/http"
+
+	"github.com/dhcgn/iot-ephemeral-value-store/domain"
 )
 
 func (c Config) KeyPairHandler(w http.ResponseWriter, r *http.Request) {

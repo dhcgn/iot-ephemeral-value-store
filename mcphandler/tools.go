@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/dhcgn/iot-ephemeral-value-store/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -94,8 +95,8 @@ func (c Config) GenerateKeyPairHandler(ctx context.Context, req *mcp.CallToolReq
 	}
 
 	result := map[string]interface{}{
-		"upload_key":   uploadKey,
-		"download_key": downloadKey,
+		"upload_key":   domain.AddUploadPrefix(uploadKey),
+		"download_key": domain.AddDownloadPrefix(downloadKey),
 		"message":      "Key pair generated successfully. Use the upload key to store data and the download key to retrieve it. The upload key must be kept secret.",
 	}
 

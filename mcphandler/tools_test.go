@@ -3,6 +3,7 @@ package mcphandler
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/dhcgn/iot-ephemeral-value-store/data"
@@ -60,6 +61,14 @@ func TestGenerateKeyPairHandler(t *testing.T) {
 
 	if data["download_key"] == nil {
 		t.Error("Expected download_key in response")
+	}
+
+	if uploadKey, ok := data["upload_key"].(string); !ok || !strings.HasPrefix(uploadKey, domain.UploadKeyPrefix) {
+		t.Errorf("Expected upload_key to have prefix '%s', got %v", domain.UploadKeyPrefix, data["upload_key"])
+	}
+
+	if downloadKey, ok := data["download_key"].(string); !ok || !strings.HasPrefix(downloadKey, domain.DownloadKeyPrefix) {
+		t.Errorf("Expected download_key to have prefix '%s', got %v", domain.DownloadKeyPrefix, data["download_key"])
 	}
 }
 

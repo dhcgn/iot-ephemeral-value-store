@@ -76,10 +76,13 @@ func Test_UploadHandler(t *testing.T) {
 		},
 		{
 			name: "UploadHandler - valid upload key with u_ prefix",
-			c: Config{
-				StatsInstance:   stats.NewStats(),
-				StorageInstance: storage.NewInMemoryStorage(),
-			},
+			c: func() Config {
+				si := storage.NewInMemoryStorage()
+				return Config{
+					StatsInstance: stats.NewStats(),
+					DataService:   &data.Service{StorageInstance: si},
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
@@ -190,10 +193,13 @@ func Test_UploadAndPatchHandler(t *testing.T) {
 		},
 		{
 			name: "UploadAndPatchHandler - valid upload key with u_ prefix",
-			c: Config{
-				StatsInstance:   stats.NewStats(),
-				StorageInstance: storage.NewInMemoryStorage(),
-			},
+			c: func() Config {
+				si := storage.NewInMemoryStorage()
+				return Config{
+					StatsInstance: stats.NewStats(),
+					DataService:   &data.Service{StorageInstance: si},
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {

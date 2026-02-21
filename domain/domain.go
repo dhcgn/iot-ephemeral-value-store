@@ -48,7 +48,7 @@ func GenerateRandomKey() string {
 func DeriveDownloadKey(uploadKey string) (string, error) {
 	// Strip the optional "u_" prefix from the upload key
 	uploadKey = StripUploadPrefix(uploadKey)
-	
+
 	if len(uploadKey) != 64 {
 		return "", fmt.Errorf("Invalid upload key length: %d", len(uploadKey))
 	}
@@ -60,7 +60,7 @@ func DeriveDownloadKey(uploadKey string) (string, error) {
 func ValidateUploadKey(uploadKey string) error {
 	// Strip the optional "u_" prefix
 	uploadKey = StripUploadPrefix(uploadKey)
-	
+
 	uploadKey = strings.ToLower(uploadKey)
 	decoded, err := hex.DecodeString(uploadKey)
 	if err != nil {
