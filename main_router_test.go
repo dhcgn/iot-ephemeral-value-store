@@ -82,6 +82,7 @@ func TestCreateRouter(t *testing.T) {
 		{"GET /", "/", http.StatusOK, false, "", ""},
 		{"GET /kp", "/kp", http.StatusOK, false, "", ""},
 		{"wrong upload key", "/wrong_upload_key", http.StatusBadRequest, false, "", ""},
+		{"OAuth well-known", "/.well-known/oauth-authorization-server", http.StatusOK, true, `"issuer"`, ""},
 	}
 
 	runTests(t, router, tests)

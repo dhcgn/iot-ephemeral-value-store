@@ -13,6 +13,8 @@
             "args": [
                 "-port",
                 "8080",
+                "-store",
+                "debug_db_store"
             ],
             "env": {"CGO_ENABLED": "0"}
         }
