@@ -199,6 +199,21 @@
             <code>echo -n "5347d61e218f9a7988292c82ddfe347a276fcb82dd2df8aaad733c8970379f41" | sha256sum</code>
         </p>
 
+        <h2>MCP Server Configuration</h2>
+        <p>This server supports the <a href="https://modelcontextprotocol.io/">Model Context Protocol (MCP)</a>. Add it to your MCP client (e.g. VS Code, Claude Desktop) using the following configuration:</p>
+        <pre><code id="mcp-config">{
+  "mcpServers": {
+    "IoT-Ephemeral-Value-Store-Server": {
+      "type": "http",
+      "url": "<span id="mcp-url">/mcp</span>",
+      "headers": {},
+      "tools": [
+        "*"
+      ]
+    }
+  }
+}</code></pre>
+
         <h2>GitHub Repository</h2>
         <p>You can find the source code and contribute to this project on GitHub:</p>
         <a href="https://github.com/dhcgn/iot-ephemeral-value-store">IoT Ephemeral Value Store Server on GitHub</a>
@@ -211,6 +226,10 @@
                 link.href = baseUrl + path;
                 link.textContent = baseUrl + path;
             });
+            const mcpUrlEl = document.getElementById('mcp-url');
+            if (mcpUrlEl) {
+                mcpUrlEl.textContent = baseUrl + '/mcp';
+            }
         });
     </script>
 </body>
