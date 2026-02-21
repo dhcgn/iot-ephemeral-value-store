@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/dhcgn/iot-ephemeral-value-store/data"
 	"github.com/gorilla/mux"
 )
 
@@ -21,14 +22,13 @@ func (c Config) downloadPlainHandler(w http.ResponseWriter, r *http.Request, bas
 	downloadKey := vars["downloadKey"]
 	param := vars["param"]
 
-	jsonData, err := c.StorageInstance.GetJSON(downloadKey)
+	jsonData, err := c.DataService.DownloadJSON(downloadKey)
 	if err != nil {
 		c.StatsInstance.IncrementHTTPErrors()
 		http.Error(w, "Invalid download key or database error", http.StatusNotFound)
 		return
 	}
 
-	// Parse the JSON data to retrieve the specific parameter
 	paramMap := make(map[string]interface{})
 	if err := json.Unmarshal(jsonData, &paramMap); err != nil {
 		c.StatsInstance.IncrementHTTPErrors()
@@ -36,24 +36,15 @@ func (c Config) downloadPlainHandler(w http.ResponseWriter, r *http.Request, bas
 		return
 	}
 
-	// Split the param to get the keys for traversal
-	keys := strings.Split(param, "/")
-
-	// Traverse the map using the keys
-	var value interface{} = paramMap
-	for _, key := range keys {
-		if m, ok := value.(map[string]interface{}); ok {
-			value, ok = m[key]
-			if !ok {
-				c.StatsInstance.IncrementHTTPErrors()
-				http.Error(w, "Parameter not found", http.StatusNotFound)
-				return
-			}
+	value, err := data.TraverseField(paramMap, param)
+	if err != nil {
+		c.StatsInstance.IncrementHTTPErrors()
+		if strings.Contains(err.Error(), "not found") {
+			http.Error(w, "Parameter not found", http.StatusNotFound)
 		} else {
-			c.StatsInstance.IncrementHTTPErrors()
 			http.Error(w, "Invalid parameter path", http.StatusBadRequest)
-			return
 		}
+		return
 	}
 
 	// If base64 mode is enabled, decode the value from base64url
@@ -99,7 +90,7 @@ func (c Config) DownloadJsonHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	downloadKey := vars["downloadKey"]
 
-	jsonData, err := c.StorageInstance.GetJSON(downloadKey)
+	jsonData, err := c.DataService.DownloadJSON(downloadKey)
 	if err != nil {
 		c.StatsInstance.IncrementHTTPErrors()
 		http.Error(w, "Invalid download key or database error", http.StatusNotFound)
@@ -123,7 +114,7 @@ func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	downloadKey := vars["downloadKey"]
 
-	jsonData, err := c.StorageInstance.GetJSON(downloadKey)
+	jsonData, err := c.DataService.DownloadJSON(downloadKey)
 	if err != nil {
 		c.StatsInstance.IncrementHTTPErrors()
 		http.Error(w, "Invalid download key or database error", http.StatusNotFound)

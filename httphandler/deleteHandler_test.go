@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/dhcgn/iot-ephemeral-value-store/data"
 	"github.com/dhcgn/iot-ephemeral-value-store/stats"
 	"github.com/dhcgn/iot-ephemeral-value-store/storage"
 	"github.com/gorilla/mux"
@@ -25,10 +26,13 @@ func Test_DeleteHandler(t *testing.T) {
 	}{
 		{
 			name: "DeleteHandler - invalid upload key",
-			c: Config{
-				StatsInstance:   stats.NewStats(),
-				StorageInstance: storage.NewInMemoryStorage(),
-			},
+			c: func() Config {
+				si := storage.NewInMemoryStorage()
+				return Config{
+					StatsInstance: stats.NewStats(),
+					DataService:   &data.Service{StorageInstance: si},
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
@@ -40,15 +44,18 @@ func Test_DeleteHandler(t *testing.T) {
 				}(),
 			},
 			expectedStatus:         http.StatusInternalServerError,
-			expectedBody:           "Error deriving download key\n",
+			expectedBody:           "invalid upload key: uploadKey must be a 256 bit hex string\n",
 			expectedHTTPErrorCount: 1,
 		},
 		{
 			name: "DeleteHandler - unknown upload key",
-			c: Config{
-				StatsInstance:   stats.NewStats(),
-				StorageInstance: storage.NewInMemoryStorage(),
-			},
+			c: func() Config {
+				si := storage.NewInMemoryStorage()
+				return Config{
+					StatsInstance: stats.NewStats(),
+					DataService:   &data.Service{StorageInstance: si},
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
@@ -65,14 +72,14 @@ func Test_DeleteHandler(t *testing.T) {
 		},
 		{
 			name: "DeleteHandler - known upload key",
-			c: Config{
-				StatsInstance: stats.NewStats(),
-				StorageInstance: func() storage.Storage {
-					storageInstance := storage.NewInMemoryStorage()
-					_ = storageInstance.Store("7790e6a7c72e97c2493334f7b22ffbaa2a41fc53a95268a4fbb45a9c34d9c5d1", map[string]interface{}{"key": "value"})
-					return storageInstance
-				}(),
-			},
+			c: func() Config {
+				si := storage.NewInMemoryStorage()
+				_ = si.Store("7790e6a7c72e97c2493334f7b22ffbaa2a41fc53a95268a4fbb45a9c34d9c5d1", map[string]interface{}{"key": "value"})
+				return Config{
+					StatsInstance: stats.NewStats(),
+					DataService:   &data.Service{StorageInstance: si},
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
