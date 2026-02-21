@@ -173,7 +173,7 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, restStats *stats
 
 	r.HandleFunc("/kp", hhc.KeyPairHandler).Methods("GET")
 
-	// Static files that need explicit handling before legacy routes
+	// Static files that need explicit handling before upload routes
 	r.HandleFunc("/llm.txt", func(w http.ResponseWriter, r *http.Request) {
 		content, err := staticFiles.ReadFile("static/llm.txt")
 		if err != nil {
@@ -187,13 +187,6 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, restStats *stats
 	// Viewer page
 	r.HandleFunc("/viewer", viewerHandler())
 
-	// Legacy routes
-	r.HandleFunc("/{uploadKey}", hhc.UploadHandler).Methods("GET")
-	r.HandleFunc("/{uploadKey}/", hhc.UploadHandler).Methods("GET")
-	r.HandleFunc("/{downloadKey}/json", hhc.DownloadJsonHandler).Methods("GET")
-	r.HandleFunc("/{downloadKey}/plain/{param}", hhc.DownloadPlainHandler).Methods("GET")
-
-	// New routes
 	r.HandleFunc("/u/{uploadKey}", hhc.UploadHandler).Methods("GET")
 	r.HandleFunc("/u/{uploadKey}/", hhc.UploadHandler).Methods("GET")
 
@@ -202,7 +195,7 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, restStats *stats
 	r.HandleFunc("/d/{downloadKey}/plain-from-base64url/{param:.*}", hhc.DownloadBase64Handler).Methods("GET")
 	r.HandleFunc("/d/{downloadKey}/", hhc.DownloadRootHandler).Methods("GET")
 	r.HandleFunc("/d/{downloadKey}", hhc.DownloadRootHandler).Methods("GET")
-	// New routes with nested paths, eg. /u/1234/param1
+
 	r.HandleFunc("/patch/{uploadKey}", hhc.UploadAndPatchHandler).Methods("GET")
 	r.HandleFunc("/patch/{uploadKey}/{param:.*}", hhc.UploadAndPatchHandler).Methods("GET")
 

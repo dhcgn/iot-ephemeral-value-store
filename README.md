@@ -39,7 +39,7 @@ To help distinguish between upload and download keys, the system adds optional p
 - **Upload keys**: Start with `u_` (e.g., `u_f0cc4756b9b01bc9...`)
 - **Download keys**: Start with `d_` (e.g., `d_2647b0c1b03c6885...`)
 
-These prefixes are **completely optional**. Keys without prefixes continue to work for backward compatibility. You can use either format:
+These prefixes are **completely optional**. You can use either format:
 - **With prefix**: `https://iot.hdev.io/u/u_f0cc4756.../`
 - **Without prefix**: `https://iot.hdev.io/u/f0cc4756.../`
 

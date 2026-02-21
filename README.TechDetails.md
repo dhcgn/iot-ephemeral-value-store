@@ -60,7 +60,6 @@ Upload data using an upload key. Replaces all existing data.
 
 **Endpoints:**
 - `/u/{uploadKey}?param1=value1&param2=value2`
-- `/{uploadKey}?param1=value1` (legacy)
 
 **Example:**
 ```bash
