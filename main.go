@@ -155,6 +155,19 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, restStats *stats
 	}
 	r.HandleFunc("/mcp", mcpServer.ServeHTTP).Methods("GET", "POST")
 
+	// OAuth 2.0 Authorization Server Metadata stub (RFC 8414 / MCP spec requirement).
+	// This server does not implement OAuth; the stub suppresses "needs authentication"
+	// warnings in MCP clients that probe for this endpoint.
+	r.HandleFunc("/.well-known/oauth-authorization-server", func(w http.ResponseWriter, r *http.Request) {
+		host := r.Host
+		if host == "" {
+			host = fmt.Sprintf("localhost:%d", port)
+		}
+		issuer := fmt.Sprintf("%s://%s", "https", host)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"issuer":%q,"response_types_supported":["none"]}`, issuer)
+	}).Methods("GET")
+
 	r.HandleFunc("/kp", hhc.KeyPairHandler).Methods("GET")
 
 	// Static files that need explicit handling before legacy routes
