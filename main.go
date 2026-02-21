@@ -11,8 +11,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/dhcgn/iot-ephemeral-value-store/data"
 	"github.com/dhcgn/iot-ephemeral-value-store/domain"
 	"github.com/dhcgn/iot-ephemeral-value-store/httphandler"
+	"github.com/dhcgn/iot-ephemeral-value-store/mcphandler"
 	"github.com/dhcgn/iot-ephemeral-value-store/middleware"
 	"github.com/dhcgn/iot-ephemeral-value-store/stats"
 	"github.com/dhcgn/iot-ephemeral-value-store/storage"
@@ -85,24 +87,27 @@ func main() {
 		log.Fatalf("Failed to parse duration: %v", err)
 	}
 
-	stats := stats.NewStats()
+	restStats := stats.NewStats()
+	mcpStats := stats.NewStats()
 
 	storage := createStorage(storePath, persistDuration)
 	defer storage.Db.Close()
 
+	dataService := &data.Service{StorageInstance: storage}
+
 	httphandlerConfig := httphandler.Config{
-		StorageInstance: storage,
-		StatsInstance:   stats,
+		DataService:   dataService,
+		StatsInstance: restStats,
 	}
 
 	middlewareConfig := middleware.Config{
 		RateLimitPerSecond: RateLimitPerSecond,
 		RateLimitBurst:     RateLimitBurst,
 		MaxRequestSize:     MaxRequestSize,
-		StatsInstance:      stats,
+		StatsInstance:      restStats,
 	}
 
-	r := createRouter(httphandlerConfig, middlewareConfig, stats)
+	r := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats)
 
 	serverAddress := fmt.Sprintf(":%d", port)
 	srv := &http.Server{
@@ -116,7 +121,7 @@ func main() {
 	listenAndServe(srv)
 }
 
-func createRouter(hhc httphandler.Config, mc middleware.Config, stats *stats.Stats) *mux.Router {
+func createRouter(hhc httphandler.Config, mc middleware.Config, restStats *stats.Stats, mcpStats *stats.Stats) *mux.Router {
 	// Template parsing
 	tmpl, err := template.ParseFS(staticFiles, "static/index.html")
 	if err != nil {
@@ -137,7 +142,31 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, stats *stats.Sta
 	r.Use(mc.LimitRequestSize)
 	r.Use(mc.RateLimit)
 
+	// MCP endpoint - create MCP server with separate stats instance
+	mcpConfig := mcphandler.Config{
+		DataService:   hhc.DataService,
+		StatsInstance: mcpStats,
+		ServerHost:    fmt.Sprintf("http://localhost:%d", port),
+		Version:       Version,
+	}
+	mcpServer, err := mcphandler.NewMCPServer(mcpConfig)
+	if err != nil {
+		log.Fatal("Error creating MCP server:", err)
+	}
+	r.HandleFunc("/mcp", mcpServer.ServeHTTP).Methods("GET", "POST")
+
 	r.HandleFunc("/kp", hhc.KeyPairHandler).Methods("GET")
+
+	// Static files that need explicit handling before legacy routes
+	r.HandleFunc("/llm.txt", func(w http.ResponseWriter, r *http.Request) {
+		content, err := staticFiles.ReadFile("static/llm.txt")
+		if err != nil {
+			http.Error(w, "File not found", http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Write(content)
+	}).Methods("GET")
 
 	// Viewer page
 	r.HandleFunc("/viewer", viewerHandler())
@@ -165,7 +194,7 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, stats *stats.Sta
 	r.HandleFunc("/delete/{uploadKey}", hhc.DeleteHandler).Methods("GET")
 	r.HandleFunc("/delete/{uploadKey}/", hhc.DeleteHandler).Methods("GET")
 
-	r.HandleFunc("/", templateHandler(tmpl, stats))
+	r.HandleFunc("/", templateHandler(tmpl, restStats, mcpStats))
 
 	// Not Found handler
 	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -179,7 +208,7 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, stats *stats.Sta
 	return r
 }
 
-func templateHandler(tmpl *template.Template, stats *stats.Stats) http.HandlerFunc {
+func templateHandler(tmpl *template.Template, restStats *stats.Stats, mcpStats *stats.Stats) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		key := domain.GenerateRandomKey()
 		key_down, err := domain.DeriveDownloadKey(key)
@@ -194,9 +223,10 @@ func templateHandler(tmpl *template.Template, stats *stats.Stats) http.HandlerFu
 			Version:       Version,
 			BuildTime:     BuildTime,
 
-			Uptime: stats.GetUptime(),
+			Uptime: restStats.GetUptime(),
 
-			StateData: stats.GetCurrentStats(),
+			StateData:    restStats.GetCurrentStats(),
+			MCPStateData: mcpStats.GetCurrentStats(),
 		}
 		tmpl.Execute(w, data)
 	}
@@ -223,5 +253,6 @@ type PageData struct {
 
 	Uptime time.Duration
 
-	StateData stats.StatsData
+	StateData    stats.StatsData
+	MCPStateData stats.StatsData
 }

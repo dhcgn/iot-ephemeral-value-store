@@ -2,16 +2,13 @@ package httphandler
 
 import (
 	"net/http"
-
-	"github.com/dhcgn/iot-ephemeral-value-store/domain"
 )
 
 func (c Config) KeyPairHandler(w http.ResponseWriter, r *http.Request) {
-	uploadKey := domain.GenerateRandomKey()
-	downloadKey, err := domain.DeriveDownloadKey(uploadKey)
+	uploadKey, downloadKey, err := c.DataService.GenerateKeyPair()
 	if err != nil {
 		c.StatsInstance.IncrementHTTPErrors()
-		http.Error(w, "Error deriving download key", http.StatusInternalServerError)
+		http.Error(w, "Error generating key pair", http.StatusInternalServerError)
 		return
 	}
 
