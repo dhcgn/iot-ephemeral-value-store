@@ -237,8 +237,8 @@ func templateHandler(tmpl *template.Template, restStats *stats.Stats, mcpStats *
 		}
 		baseURL := scheme + "://" + r.Host
 		data := PageData{
-			UploadKey:     key,
-			DownloadKey:   key_down,
+			UploadKey:     domain.AddUploadPrefix(key),
+			DownloadKey:   domain.AddDownloadPrefix(key_down),
 			DataRetention: persistDurationString,
 			Version:       Version,
 			BuildTime:     BuildTime,
