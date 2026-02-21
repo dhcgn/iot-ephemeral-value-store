@@ -11,6 +11,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/dhcgn/iot-ephemeral-value-store/data"
 	"github.com/dhcgn/iot-ephemeral-value-store/domain"
 	"github.com/dhcgn/iot-ephemeral-value-store/httphandler"
 	"github.com/dhcgn/iot-ephemeral-value-store/mcphandler"
@@ -92,9 +93,11 @@ func main() {
 	storage := createStorage(storePath, persistDuration)
 	defer storage.Db.Close()
 
+	dataService := &data.Service{StorageInstance: storage}
+
 	httphandlerConfig := httphandler.Config{
-		StorageInstance: storage,
-		StatsInstance:   restStats,
+		DataService:   dataService,
+		StatsInstance: restStats,
 	}
 
 	middlewareConfig := middleware.Config{
@@ -141,10 +144,10 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, restStats *stats
 
 	// MCP endpoint - create MCP server with separate stats instance
 	mcpConfig := mcphandler.Config{
-		StorageInstance: hhc.StorageInstance,
-		StatsInstance:   mcpStats,
-		ServerHost:      fmt.Sprintf("http://localhost:%d", port),
-		Version:         Version,
+		DataService:   hhc.DataService,
+		StatsInstance: mcpStats,
+		ServerHost:    fmt.Sprintf("http://localhost:%d", port),
+		Version:       Version,
 	}
 	mcpServer, err := mcphandler.NewMCPServer(mcpConfig)
 	if err != nil {

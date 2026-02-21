@@ -5,21 +5,24 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/dhcgn/iot-ephemeral-value-store/data"
 	"github.com/dhcgn/iot-ephemeral-value-store/domain"
 	"github.com/dhcgn/iot-ephemeral-value-store/stats"
 	"github.com/dhcgn/iot-ephemeral-value-store/storage"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+func newTestConfig() (Config, storage.StorageInstance) {
+	si := storage.NewInMemoryStorage()
+	return Config{
+		DataService:   &data.Service{StorageInstance: si},
+		StatsInstance: stats.NewStats(),
+		ServerHost:    "http://localhost:8080",
+	}, si
+}
+
 func TestGenerateKeyPairHandler(t *testing.T) {
-	// Setup
-	storageInstance := storage.NewInMemoryStorage()
-	statsInstance := stats.NewStats()
-	config := Config{
-		StorageInstance: storageInstance,
-		StatsInstance:   statsInstance,
-		ServerHost:      "http://localhost:8080",
-	}
+	config, _ := newTestConfig()
 
 	ctx := context.Background()
 	req := &mcp.CallToolRequest{}
@@ -61,14 +64,7 @@ func TestGenerateKeyPairHandler(t *testing.T) {
 }
 
 func TestUploadDataHandler(t *testing.T) {
-	// Setup
-	storageInstance := storage.NewInMemoryStorage()
-	statsInstance := stats.NewStats()
-	config := Config{
-		StorageInstance: storageInstance,
-		StatsInstance:   statsInstance,
-		ServerHost:      "http://localhost:8080",
-	}
+	config, si := newTestConfig()
 
 	uploadKey := domain.GenerateRandomKey()
 	downloadKey, _ := domain.DeriveDownloadKey(uploadKey)
@@ -96,7 +92,7 @@ func TestUploadDataHandler(t *testing.T) {
 	}
 
 	// Verify data was stored
-	storedData, err := storageInstance.GetJSON(downloadKey)
+	storedData, err := si.GetJSON(downloadKey)
 	if err != nil {
 		t.Fatalf("Expected data to be stored, got error: %v", err)
 	}
@@ -120,14 +116,7 @@ func TestUploadDataHandler(t *testing.T) {
 }
 
 func TestPatchDataHandler(t *testing.T) {
-	// Setup
-	storageInstance := storage.NewInMemoryStorage()
-	statsInstance := stats.NewStats()
-	config := Config{
-		StorageInstance: storageInstance,
-		StatsInstance:   statsInstance,
-		ServerHost:      "http://localhost:8080",
-	}
+	config, si := newTestConfig()
 
 	uploadKey := domain.GenerateRandomKey()
 	downloadKey, _ := domain.DeriveDownloadKey(uploadKey)
@@ -165,7 +154,7 @@ func TestPatchDataHandler(t *testing.T) {
 	}
 
 	// Verify data was merged
-	storedData, err := storageInstance.GetJSON(downloadKey)
+	storedData, err := si.GetJSON(downloadKey)
 	if err != nil {
 		t.Fatalf("Expected data to be stored, got error: %v", err)
 	}
@@ -194,27 +183,20 @@ func TestPatchDataHandler(t *testing.T) {
 }
 
 func TestDownloadDataHandler(t *testing.T) {
-	// Setup
-	storageInstance := storage.NewInMemoryStorage()
-	statsInstance := stats.NewStats()
-	config := Config{
-		StorageInstance: storageInstance,
-		StatsInstance:   statsInstance,
-		ServerHost:      "http://localhost:8080",
-	}
+	config, si := newTestConfig()
 
 	uploadKey := domain.GenerateRandomKey()
 	downloadKey, _ := domain.DeriveDownloadKey(uploadKey)
 
 	// Upload some data first
-	data := map[string]interface{}{
+	testData := map[string]interface{}{
 		"temp":     "23.5",
 		"humidity": "45",
 		"room": map[string]interface{}{
 			"temp": "22",
 		},
 	}
-	storageInstance.Store(downloadKey, data)
+	si.Store(downloadKey, testData)
 
 	ctx := context.Background()
 	req := &mcp.CallToolRequest{}
@@ -298,23 +280,16 @@ func TestDownloadDataHandler(t *testing.T) {
 }
 
 func TestDeleteDataHandler(t *testing.T) {
-	// Setup
-	storageInstance := storage.NewInMemoryStorage()
-	statsInstance := stats.NewStats()
-	config := Config{
-		StorageInstance: storageInstance,
-		StatsInstance:   statsInstance,
-		ServerHost:      "http://localhost:8080",
-	}
+	config, si := newTestConfig()
 
 	uploadKey := domain.GenerateRandomKey()
 	downloadKey, _ := domain.DeriveDownloadKey(uploadKey)
 
 	// Upload some data first
-	data := map[string]interface{}{
+	testData := map[string]interface{}{
 		"temp": "23.5",
 	}
-	storageInstance.Store(downloadKey, data)
+	si.Store(downloadKey, testData)
 
 	ctx := context.Background()
 	req := &mcp.CallToolRequest{}
@@ -335,21 +310,14 @@ func TestDeleteDataHandler(t *testing.T) {
 	}
 
 	// Verify data was deleted
-	_, err = storageInstance.GetJSON(downloadKey)
+	_, err = si.GetJSON(downloadKey)
 	if err == nil {
 		t.Error("Expected data to be deleted")
 	}
 }
 
 func TestInvalidUploadKey(t *testing.T) {
-	// Setup
-	storageInstance := storage.NewInMemoryStorage()
-	statsInstance := stats.NewStats()
-	config := Config{
-		StorageInstance: storageInstance,
-		StatsInstance:   statsInstance,
-		ServerHost:      "http://localhost:8080",
-	}
+	config, _ := newTestConfig()
 
 	ctx := context.Background()
 	req := &mcp.CallToolRequest{}
@@ -397,83 +365,11 @@ func TestInvalidUploadKey(t *testing.T) {
 	})
 }
 
-func TestMergeDataAtPath(t *testing.T) {
-	t.Run("Merge at root", func(t *testing.T) {
-		existing := map[string]interface{}{
-			"a": "1",
-		}
-		new := map[string]interface{}{
-			"b": "2",
-		}
-
-		result := mergeDataAtPath(existing, "", new)
-
-		if result["a"] != "1" {
-			t.Errorf("Expected a=1, got %v", result["a"])
-		}
-		if result["b"] != "2" {
-			t.Errorf("Expected b=2, got %v", result["b"])
-		}
-	})
-
-	t.Run("Merge at nested path", func(t *testing.T) {
-		existing := map[string]interface{}{
-			"room1": map[string]interface{}{
-				"temp": "20",
-			},
-		}
-		new := map[string]interface{}{
-			"humidity": "45",
-		}
-
-		result := mergeDataAtPath(existing, "room1", new)
-
-		room1, ok := result["room1"].(map[string]interface{})
-		if !ok {
-			t.Fatal("Expected room1 to be a map")
-		}
-		if room1["temp"] != "20" {
-			t.Errorf("Expected temp=20, got %v", room1["temp"])
-		}
-		if room1["humidity"] != "45" {
-			t.Errorf("Expected humidity=45, got %v", room1["humidity"])
-		}
-	})
-
-	t.Run("Create nested path", func(t *testing.T) {
-		existing := map[string]interface{}{}
-		new := map[string]interface{}{
-			"temp": "22",
-		}
-
-		result := mergeDataAtPath(existing, "room1/sensors", new)
-
-		room1, ok := result["room1"].(map[string]interface{})
-		if !ok {
-			t.Fatal("Expected room1 to be a map")
-		}
-		sensors, ok := room1["sensors"].(map[string]interface{})
-		if !ok {
-			t.Fatal("Expected sensors to be a map")
-		}
-		if sensors["temp"] != "22" {
-			t.Errorf("Expected temp=22, got %v", sensors["temp"])
-		}
-	})
-}
-
 // TestAllCapabilitiesImplemented verifies that all tools advertised in capabilities are actually registered
 // This test creates an MCP server and then tests each tool by calling them to ensure they're registered
 func TestAllCapabilitiesImplemented(t *testing.T) {
-	// Setup
-	storageInstance := storage.NewInMemoryStorage()
-	statsInstance := stats.NewStats()
-	config := Config{
-		StorageInstance: storageInstance,
-		StatsInstance:   statsInstance,
-		ServerHost:      "http://localhost:8080",
-		Version:         "test-version",
-	}
+	config, _ := newTestConfig()
+	config.Version = "test-version"
 
 	// Create MCP server
 	mcpServer, err := NewMCPServer(config)

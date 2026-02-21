@@ -5,10 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"strings"
-	"time"
 
-	"github.com/dhcgn/iot-ephemeral-value-store/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -91,11 +88,10 @@ func (c Config) GenerateKeyPairHandler(ctx context.Context, req *mcp.CallToolReq
 		return nil, nil, ctx.Err()
 	}
 
-	uploadKey := domain.GenerateRandomKey()
-	downloadKey, err := domain.DeriveDownloadKey(uploadKey)
+	uploadKey, downloadKey, err := c.DataService.GenerateKeyPair()
 	if err != nil {
 		c.StatsInstance.IncrementHTTPErrors()
-		return nil, nil, fmt.Errorf("error deriving download key: %w", err)
+		return nil, nil, err
 	}
 
 	result := map[string]interface{}{
@@ -125,28 +121,10 @@ func (c Config) UploadDataHandler(ctx context.Context, req *mcp.CallToolRequest,
 		return nil, nil, ctx.Err()
 	}
 
-	// Validate upload key
-	if err := domain.ValidateUploadKey(params.UploadKey); err != nil {
-		return nil, nil, fmt.Errorf("invalid upload key: %w", err)
-	}
-
-	// Derive download key
-	downloadKey, err := domain.DeriveDownloadKey(params.UploadKey)
+	downloadKey, _, err := c.DataService.Upload(params.UploadKey, params.Parameters)
 	if err != nil {
 		c.StatsInstance.IncrementHTTPErrors()
-		return nil, nil, fmt.Errorf("error deriving download key: %w", err)
-	}
-
-	// Add timestamp
-	data := make(map[string]interface{})
-	for k, v := range params.Parameters {
-		data[k] = v
-	}
-	data["timestamp"] = time.Now().UTC().Format(time.RFC3339)
-
-	// Store data (replaces existing data)
-	if err := c.StorageInstance.Store(downloadKey, data); err != nil {
-		return nil, nil, fmt.Errorf("error storing data: %w", err)
+		return nil, nil, err
 	}
 	c.StatsInstance.IncrementUploads()
 
@@ -182,47 +160,10 @@ func (c Config) PatchDataHandler(ctx context.Context, req *mcp.CallToolRequest, 
 		return nil, nil, ctx.Err()
 	}
 
-	// Validate upload key
-	if err := domain.ValidateUploadKey(params.UploadKey); err != nil {
-		return nil, nil, fmt.Errorf("invalid upload key: %w", err)
-	}
-
-	// Derive download key
-	downloadKey, err := domain.DeriveDownloadKey(params.UploadKey)
+	downloadKey, _, err := c.DataService.Patch(params.UploadKey, params.Path, params.Parameters)
 	if err != nil {
 		c.StatsInstance.IncrementHTTPErrors()
-		return nil, nil, fmt.Errorf("error deriving download key: %w", err)
-	}
-
-	// Get existing data
-	var existingData map[string]interface{}
-	existingJSON, err := c.StorageInstance.GetJSON(downloadKey)
-	if err == nil {
-		// Data exists, unmarshal it
-		if err := json.Unmarshal(existingJSON, &existingData); err != nil {
-			return nil, nil, fmt.Errorf("error unmarshaling existing data: %w", err)
-		}
-	} else {
-		// No existing data, start fresh
-		existingData = make(map[string]interface{})
-	}
-
-	// Prepare new data with timestamp
-	newData := make(map[string]interface{})
-	for k, v := range params.Parameters {
-		newData[k] = v
-	}
-	newData["timestamp"] = time.Now().UTC().Format(time.RFC3339)
-
-	// Merge data at the specified path
-	mergedData := mergeDataAtPath(existingData, params.Path, newData)
-
-	// Update the root timestamp
-	mergedData["timestamp"] = time.Now().UTC().Format(time.RFC3339)
-
-	// Store merged data
-	if err := c.StorageInstance.Store(downloadKey, mergedData); err != nil {
-		return nil, nil, fmt.Errorf("error storing data: %w", err)
+		return nil, nil, err
 	}
 	c.StatsInstance.IncrementUploads()
 
@@ -264,47 +205,37 @@ func (c Config) DownloadDataHandler(ctx context.Context, req *mcp.CallToolReques
 		return nil, nil, ctx.Err()
 	}
 
-	// Get data from storage
-	jsonData, err := c.StorageInstance.GetJSON(params.DownloadKey)
-	if err != nil {
-		c.StatsInstance.IncrementHTTPErrors()
-		return nil, nil, fmt.Errorf("invalid download key or data not found: %w", err)
-	}
-
-	// Parse JSON data
-	var dataMap map[string]interface{}
-	if err := json.Unmarshal(jsonData, &dataMap); err != nil {
-		c.StatsInstance.IncrementHTTPErrors()
-		return nil, nil, fmt.Errorf("error decoding JSON: %w", err)
-	}
-
-	c.StatsInstance.IncrementDownloads()
-
 	var result map[string]interface{}
 
-	// If no parameter specified, return all data
 	if params.Parameter == "" {
+		// Return all data as JSON
+		jsonData, err := c.DataService.DownloadJSON(params.DownloadKey)
+		if err != nil {
+			c.StatsInstance.IncrementHTTPErrors()
+			return nil, nil, err
+		}
+
+		var dataMap map[string]interface{}
+		if err := json.Unmarshal(jsonData, &dataMap); err != nil {
+			c.StatsInstance.IncrementHTTPErrors()
+			return nil, nil, fmt.Errorf("error decoding JSON: %w", err)
+		}
+
+		c.StatsInstance.IncrementDownloads()
+
 		result = map[string]interface{}{
 			"data":    dataMap,
 			"message": "Retrieved all data as JSON",
 		}
 	} else {
-		// Extract specific parameter (supports nested paths like "room1/temp")
-		keys := strings.Split(params.Parameter, "/")
-		var value interface{} = dataMap
-
-		for _, key := range keys {
-			if m, ok := value.(map[string]interface{}); ok {
-				value, ok = m[key]
-				if !ok {
-					c.StatsInstance.IncrementHTTPErrors()
-					return nil, nil, fmt.Errorf("parameter '%s' not found", params.Parameter)
-				}
-			} else {
-				c.StatsInstance.IncrementHTTPErrors()
-				return nil, nil, fmt.Errorf("invalid parameter path: '%s'", params.Parameter)
-			}
+		// Retrieve specific parameter
+		value, err := c.DataService.DownloadField(params.DownloadKey, params.Parameter)
+		if err != nil {
+			c.StatsInstance.IncrementHTTPErrors()
+			return nil, nil, err
 		}
+
+		c.StatsInstance.IncrementDownloads()
 
 		result = map[string]interface{}{
 			"data":      value,
@@ -332,21 +263,10 @@ func (c Config) DeleteDataHandler(ctx context.Context, req *mcp.CallToolRequest,
 		return nil, nil, ctx.Err()
 	}
 
-	// Validate upload key
-	if err := domain.ValidateUploadKey(params.UploadKey); err != nil {
-		return nil, nil, fmt.Errorf("invalid upload key: %w", err)
-	}
-
-	// Derive download key
-	downloadKey, err := domain.DeriveDownloadKey(params.UploadKey)
+	_, err := c.DataService.Delete(params.UploadKey)
 	if err != nil {
 		c.StatsInstance.IncrementHTTPErrors()
-		return nil, nil, fmt.Errorf("error deriving download key: %w", err)
-	}
-
-	// Delete the data
-	if err := c.StorageInstance.Delete(downloadKey); err != nil {
-		return nil, nil, fmt.Errorf("error deleting data: %w", err)
+		return nil, nil, err
 	}
 
 	result := map[string]interface{}{
@@ -364,48 +284,6 @@ func (c Config) DeleteDataHandler(ctx context.Context, req *mcp.CallToolRequest,
 			&mcp.TextContent{Text: string(resultJSON)},
 		},
 	}, nil, nil
-}
-
-// mergeDataAtPath merges newData into existingData at the specified path
-// If path is empty, merges at root level
-// Path segments are separated by "/"
-func mergeDataAtPath(existingData map[string]interface{}, path string, newData map[string]interface{}) map[string]interface{} {
-	if path == "" {
-		// Merge at root level
-		for k, v := range newData {
-			existingData[k] = v
-		}
-		return existingData
-	}
-
-	// Split path into segments
-	segments := strings.Split(path, "/")
-
-	// Navigate/create nested structure
-	current := existingData
-	for i, segment := range segments {
-		if i == len(segments)-1 {
-			// Last segment - merge the data here
-			existingMap, ok := current[segment].(map[string]interface{})
-			if !ok {
-				existingMap = make(map[string]interface{})
-			}
-			for k, v := range newData {
-				existingMap[k] = v
-			}
-			current[segment] = existingMap
-		} else {
-			// Intermediate segment - ensure it's a map
-			nextMap, ok := current[segment].(map[string]interface{})
-			if !ok {
-				nextMap = make(map[string]interface{})
-				current[segment] = nextMap
-			}
-			current = nextMap
-		}
-	}
-
-	return existingData
 }
 
 // RegisterTools registers all MCP tools with the server

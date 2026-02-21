@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/dhcgn/iot-ephemeral-value-store/data"
 	"github.com/dhcgn/iot-ephemeral-value-store/httphandler"
 	"github.com/dhcgn/iot-ephemeral-value-store/middleware"
 	"github.com/dhcgn/iot-ephemeral-value-store/stats"
@@ -33,8 +34,8 @@ func createTestEnvironment(t *testing.T) (*stats.Stats, *stats.Stats, httphandle
 	storageInMemory := storage.NewInMemoryStorage()
 
 	httphandlerConfig := httphandler.Config{
-		StorageInstance: storageInMemory,
-		StatsInstance:   restStats,
+		DataService:   &data.Service{StorageInstance: storageInMemory},
+		StatsInstance: restStats,
 	}
 
 	middlewareConfig := middleware.Config{
