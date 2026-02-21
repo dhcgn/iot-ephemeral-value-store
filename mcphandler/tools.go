@@ -54,8 +54,11 @@ func extractToolNames() []string {
 	return names
 }
 
-// GenerateKeyPairInput represents the input for generating a key pair
-type GenerateKeyPairInput struct{}
+// GenerateKeyPairInput represents the input for generating a key pair.
+// The noop field exists to satisfy schema generators that disallow empty objects.
+type GenerateKeyPairInput struct {
+	Noop *struct{} `json:"noop,omitempty" jsonschema:"Optional placeholder field. This tool does not require any input parameters."`
+}
 
 // UploadDataInput represents the input for uploading data
 type UploadDataInput struct {
