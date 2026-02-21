@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log/slog"
 	"net"
 	"net/http"
 	"sync"
@@ -20,6 +21,7 @@ func (c Config) RateLimit(next http.Handler) http.Handler {
 
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
+			slog.Error("middleware: failed to parse remote address", "error", err, "remote_addr", r.RemoteAddr)
 			c.StatsInstance.IncrementHTTPErrors()
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
@@ -33,6 +35,7 @@ func (c Config) RateLimit(next http.Handler) http.Handler {
 
 		limiter := c.getLimiter(ip)
 		if !limiter.Allow() {
+			slog.Error("middleware: rate limit exceeded", "remote_addr", ip, "method", r.Method, "path", r.URL.Path)
 			c.StatsInstance.IncrementHTTPErrors()
 			c.StatsInstance.RecordRateLimitHit(ip)
 			http.Error(w, "Too Many Requests", http.StatusTooManyRequests)

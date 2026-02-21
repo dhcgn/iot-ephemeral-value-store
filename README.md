@@ -1,10 +1,12 @@
 [![Go](https://github.com/dhcgn/iot-ephemeral-value-store/actions/workflows/build_and_test.yml/badge.svg)](https://github.com/dhcgn/iot-ephemeral-value-store/actions/workflows/build_and_test.yml)
 [![codecov](https://codecov.io/gh/dhcgn/iot-ephemeral-value-store/graph/badge.svg?token=LLTOitLLDc)](https://codecov.io/gh/dhcgn/iot-ephemeral-value-store)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dhcgn/iot-ephemeral-value-store)](https://goreportcard.com/report/github.com/dhcgn/iot-ephemeral-value-store)
+[![govulncheck](https://github.com/dhcgn/iot-ephemeral-value-store/actions/workflows/govulncheck.yml/badge.svg)](https://github.com/dhcgn/iot-ephemeral-value-store/actions/workflows/govulncheck.yml)
 
 > MCP Demo Server
-> [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_IoT--Ephemeral--Value--Store--Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=ffffff)](vscode:mcp/install?%7B%22name%22%3A%22IoT-Ephemeral-Value-Store-Server%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fiot.hdev.io%2Fmcp%22%2C%22headers%22%3A%7B%7D%7D)
-> [![Install in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-Install_IoT--Ephemeral--Value--Store--Server-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=ffffff)](vscode-insiders:mcp/install?%7B%22name%22%3A%22IoT-Ephemeral-Value-Store-Server%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fiot.hdev.io%2Fmcp%22%2C%22headers%22%3A%7B%7D%7D)
+> Url: <https://iot.hdev.io/mcp>
+> [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_IoT--Ephemeral--Value--Store--Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=ffffff)](vscode:mcp/install?%7B%22name%22%3A%22IoT-Ephemeral-Value-Store-Server%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fiot.hdev.io%2Fmcp%22%2C%22headers%22%3A%7B%7D%7D)  
+> [![Install in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-Install_IoT--Ephemeral--Value--Store--Server-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=ffffff)](vscode-insiders:mcp/install?%7B%22name%22%3A%22IoT-Ephemeral-Value-Store-Server%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fiot.hdev.io%2Fmcp%22%2C%22headers%22%3A%7B%7D%7D)  
 
 # iot-ephemeral-value-store
 
@@ -39,7 +41,7 @@ To help distinguish between upload and download keys, the system adds optional p
 - **Upload keys**: Start with `u_` (e.g., `u_f0cc4756b9b01bc9...`)
 - **Download keys**: Start with `d_` (e.g., `d_2647b0c1b03c6885...`)
 
-These prefixes are **completely optional**. Keys without prefixes continue to work for backward compatibility. You can use either format:
+These prefixes are **completely optional**. You can use either format:
 - **With prefix**: `https://iot.hdev.io/u/u_f0cc4756.../`
 - **Without prefix**: `https://iot.hdev.io/u/f0cc4756.../`
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/dhcgn/iot-ephemeral-value-store/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -90,6 +91,7 @@ func (c Config) GenerateKeyPairHandler(ctx context.Context, req *mcp.CallToolReq
 
 	uploadKey, downloadKey, err := c.DataService.GenerateKeyPair()
 	if err != nil {
+		slog.Error("mcp generate_key_pair: failed", "error", err)
 		c.StatsInstance.IncrementHTTPErrors()
 		return nil, nil, err
 	}
@@ -121,6 +123,7 @@ func (c Config) UploadDataHandler(ctx context.Context, req *mcp.CallToolRequest,
 
 	_, _, err := c.DataService.Upload(params.UploadKey, params.Parameters)
 	if err != nil {
+		slog.Error("mcp upload_data: failed", "error", err)
 		c.StatsInstance.IncrementHTTPErrors()
 		return nil, nil, err
 	}
@@ -152,6 +155,7 @@ func (c Config) PatchDataHandler(ctx context.Context, req *mcp.CallToolRequest, 
 
 	_, _, err := c.DataService.Patch(params.UploadKey, params.Path, params.Parameters)
 	if err != nil {
+		slog.Error("mcp patch_data: failed", "error", err, "path", params.Path)
 		c.StatsInstance.IncrementHTTPErrors()
 		return nil, nil, err
 	}
@@ -188,12 +192,14 @@ func (c Config) DownloadDataHandler(ctx context.Context, req *mcp.CallToolReques
 		// Return all data as JSON
 		jsonData, err := c.DataService.DownloadJSON(params.DownloadKey)
 		if err != nil {
+			slog.Error("mcp download_data: failed to retrieve data", "error", err)
 			c.StatsInstance.IncrementHTTPErrors()
 			return nil, nil, err
 		}
 
 		var dataMap map[string]interface{}
 		if err := json.Unmarshal(jsonData, &dataMap); err != nil {
+			slog.Error("mcp download_data: failed to decode JSON", "error", err)
 			c.StatsInstance.IncrementHTTPErrors()
 			return nil, nil, fmt.Errorf("error decoding JSON: %w", err)
 		}
@@ -208,6 +214,7 @@ func (c Config) DownloadDataHandler(ctx context.Context, req *mcp.CallToolReques
 		// Retrieve specific parameter
 		value, err := c.DataService.DownloadField(params.DownloadKey, params.Parameter)
 		if err != nil {
+			slog.Error("mcp download_data: failed to retrieve field", "error", err, "parameter", params.Parameter)
 			c.StatsInstance.IncrementHTTPErrors()
 			return nil, nil, err
 		}
@@ -242,6 +249,7 @@ func (c Config) DeleteDataHandler(ctx context.Context, req *mcp.CallToolRequest,
 
 	_, err := c.DataService.Delete(params.UploadKey)
 	if err != nil {
+		slog.Error("mcp delete_data: failed", "error", err)
 		c.StatsInstance.IncrementHTTPErrors()
 		return nil, nil, err
 	}

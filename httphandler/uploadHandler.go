@@ -2,6 +2,7 @@ package httphandler
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -38,6 +39,7 @@ func (c Config) handleUpload(w http.ResponseWriter, r *http.Request, uploadKey, 
 	}
 
 	if err != nil {
+		slog.Error("upload: failed to store data", "error", err, "method", r.Method, "path", r.URL.Path)
 		c.StatsInstance.IncrementHTTPErrors()
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

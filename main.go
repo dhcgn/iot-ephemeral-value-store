@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io/fs"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
@@ -46,6 +47,7 @@ var (
 	persistDurationString string
 	storePath             string
 	port                  int
+	healthcheck           bool
 )
 
 // Set in build time
@@ -60,6 +62,7 @@ func initFlags() {
 	myFlags.StringVar(&persistDurationString, "persist-values-for", DefaultPersistDuration, "Duration for which the values are stored before they are deleted.")
 	myFlags.StringVar(&storePath, "store", DefaultStorePath, "Path to the directory where the values will be stored.")
 	myFlags.IntVar(&port, "port", DefaultPort, "The port number on which the server will listen.")
+	myFlags.BoolVar(&healthcheck, "healthcheck", false, "Perform a health check against the running server and exit.")
 
 	myFlags.Parse(os.Args[1:])
 }
@@ -76,11 +79,21 @@ var (
 )
 
 func main() {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, nil)))
+
 	fmt.Println("Starting iot-ephemeral-value-store-server", Version, "Build:", BuildTime, "Commit:", Commit)
 	fmt.Println("https://github.com/dhcgn/iot-ephemeral-value-store")
 	fmt.Println("")
 
 	initFlags()
+
+	if healthcheck {
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/health", port))
+		if err != nil || resp.StatusCode != http.StatusOK {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
 
 	persistDuration, err := time.ParseDuration(persistDurationString)
 	if err != nil {
@@ -168,9 +181,14 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, restStats *stats
 		fmt.Fprintf(w, `{"issuer":%q,"response_types_supported":["none"]}`, issuer)
 	}).Methods("GET")
 
+	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"status":"ok"}`)
+	}).Methods("GET")
+
 	r.HandleFunc("/kp", hhc.KeyPairHandler).Methods("GET")
 
-	// Static files that need explicit handling before legacy routes
+	// Static files that need explicit handling before upload routes
 	r.HandleFunc("/llm.txt", func(w http.ResponseWriter, r *http.Request) {
 		content, err := staticFiles.ReadFile("static/llm.txt")
 		if err != nil {
@@ -184,13 +202,6 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, restStats *stats
 	// Viewer page
 	r.HandleFunc("/viewer", viewerHandler())
 
-	// Legacy routes
-	r.HandleFunc("/{uploadKey}", hhc.UploadHandler).Methods("GET")
-	r.HandleFunc("/{uploadKey}/", hhc.UploadHandler).Methods("GET")
-	r.HandleFunc("/{downloadKey}/json", hhc.DownloadJsonHandler).Methods("GET")
-	r.HandleFunc("/{downloadKey}/plain/{param}", hhc.DownloadPlainHandler).Methods("GET")
-
-	// New routes
 	r.HandleFunc("/u/{uploadKey}", hhc.UploadHandler).Methods("GET")
 	r.HandleFunc("/u/{uploadKey}/", hhc.UploadHandler).Methods("GET")
 
@@ -199,7 +210,7 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, restStats *stats
 	r.HandleFunc("/d/{downloadKey}/plain-from-base64url/{param:.*}", hhc.DownloadBase64Handler).Methods("GET")
 	r.HandleFunc("/d/{downloadKey}/", hhc.DownloadRootHandler).Methods("GET")
 	r.HandleFunc("/d/{downloadKey}", hhc.DownloadRootHandler).Methods("GET")
-	// New routes with nested paths, eg. /u/1234/param1
+
 	r.HandleFunc("/patch/{uploadKey}", hhc.UploadAndPatchHandler).Methods("GET")
 	r.HandleFunc("/patch/{uploadKey}/{param:.*}", hhc.UploadAndPatchHandler).Methods("GET")
 

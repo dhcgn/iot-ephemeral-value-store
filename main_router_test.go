@@ -81,21 +81,8 @@ func TestCreateRouter(t *testing.T) {
 	tests := []testCase{
 		{"GET /", "/", http.StatusOK, false, "", ""},
 		{"GET /kp", "/kp", http.StatusOK, false, "", ""},
-		{"wrong upload key", "/wrong_upload_key", http.StatusBadRequest, false, "", ""},
+		{"unknown path", "/wrong_upload_key", http.StatusNotFound, false, "", ""},
 		{"OAuth well-known", "/.well-known/oauth-authorization-server", http.StatusOK, true, `"issuer"`, ""},
-	}
-
-	runTests(t, router, tests)
-}
-
-func TestLegacyRoutes(t *testing.T) {
-	restStats, mcpStats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
-	router := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats)
-
-	tests := []testCase{
-		{"Upload", buildURL("/%s/?value=8923423", keyUp), http.StatusOK, true, "Data uploaded successfully", ""},
-		{"Download Plain", buildURL("/%s/plain/value", keyDown), http.StatusOK, true, "8923423\n", ""},
-		{"Download JSON", buildURL("/%s/json", keyDown), http.StatusOK, true, "\"value\":\"8923423\"", ""},
 	}
 
 	runTests(t, router, tests)
@@ -139,20 +126,6 @@ func TestRoutesUploadDownloadDelete(t *testing.T) {
 		{"Delete", buildURL("/delete/%s/", keyUp), http.StatusOK, true, "OK", ""},
 		{"Download after delete plain", buildURL("/d/%s/plain/value", keyDown), http.StatusNotFound, false, "", ""},
 		{"Download after delete json", buildURL("/d/%s/json", keyDown), http.StatusNotFound, false, "", ""},
-	}
-
-	runTests(t, router, tests)
-}
-
-func TestLegacyRoutesWithDifferentPathEndings(t *testing.T) {
-	restStats, mcpStats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
-	router := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats)
-
-	tests := []testCase{
-		{"Upload Legacy with ending /", buildURL("/%s/?value=8923423", keyUp), http.StatusOK, true, "Data uploaded successfully", ""},
-		{"Upload Legacy without ending /", buildURL("/%s?value=8923423", keyUp), http.StatusOK, true, "Data uploaded successfully", ""},
-		{"Upload with ending /", buildURL("/u/%s/?value=8923423", keyUp), http.StatusOK, true, "Data uploaded successfully", ""},
-		{"Upload without ending /", buildURL("/u/%s?value=8923423", keyUp), http.StatusOK, true, "Data uploaded successfully", ""},
 	}
 
 	runTests(t, router, tests)
