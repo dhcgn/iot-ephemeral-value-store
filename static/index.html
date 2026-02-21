@@ -10,39 +10,171 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="manifest" href="/site.webmanifest">
     <style>
+        *, *::before, *::after { box-sizing: border-box; }
+
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
             background-color: #f4f4f9;
             color: #333;
         }
 
-        h1,
-        h2 {
-            color: #2c3e50;
+        header {
+            background: linear-gradient(135deg, #2c3e50, #3d5a80);
+            color: white;
+            padding: 40px 20px 32px;
+            text-align: center;
         }
 
-        h1 {
-            margin-top: 20px;
+        header h1 {
+            margin: 0 0 8px;
+            font-size: 1.8rem;
+            color: white;
+        }
+
+        header p {
+            margin: 0;
+            opacity: 0.85;
+            font-size: 1rem;
+        }
+
+        h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            margin-bottom: 12px;
+        }
+
+        h3 {
+            color: #2c3e50;
+            margin: 16px 0 8px;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .container {
-            max-width: 800px;
-            width: 100%;
-            padding: 0 20px;
-            box-sizing: border-box;
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 32px 20px 60px;
         }
 
-        p,
-        ul {
-            margin: 10px 0;
-            line-height: 1.6;
+        /* ── Viewer banner ── */
+        .viewer-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            background: linear-gradient(135deg, #667eea, #5568d3);
+            color: white;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 28px;
+            box-shadow: 0 4px 14px rgba(102, 126, 234, 0.35);
         }
 
+        .viewer-banner-text h2 {
+            color: white;
+            margin-bottom: 4px;
+        }
+
+        .viewer-banner-text p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+
+        .viewer-banner-btn {
+            flex-shrink: 0;
+            background: white;
+            color: #5568d3;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1rem;
+            white-space: nowrap;
+            transition: all 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+
+        .viewer-banner-btn:hover {
+            background: #f0f2ff;
+            transform: translateY(-1px);
+            text-decoration: none;
+        }
+
+        /* ── Key pair box ── */
+        .key-box {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .key-card {
+            border-radius: 10px;
+            padding: 18px 20px;
+            border: 2px solid transparent;
+        }
+
+        .key-card.upload {
+            background: #fff8e1;
+            border-color: #f59e0b;
+        }
+
+        .key-card.download {
+            background: #e8f5e9;
+            border-color: #4caf50;
+        }
+
+        .key-card .key-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 6px;
+        }
+
+        .key-card.upload .key-label { color: #b45309; }
+        .key-card.download .key-label { color: #2e7d32; }
+
+        .key-card .key-value {
+            font-family: monospace;
+            font-size: 0.8rem;
+            word-break: break-all;
+            color: #333;
+            background: rgba(255,255,255,0.6);
+            padding: 6px 8px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .key-card .key-note {
+            font-size: 0.8rem;
+            opacity: 0.75;
+        }
+
+        .key-card.upload .key-note { color: #92400e; }
+        .key-card.download .key-note { color: #1b5e20; }
+
+        /* ── Section cards ── */
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 22px 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        /* ── Links ── */
         a {
             color: #3498db;
             text-decoration: none;
@@ -52,29 +184,23 @@
             text-decoration: underline;
         }
 
-        ul {
-            list-style-type: none;
-            padding: 0;
-        }
-
-        li {
-            margin-bottom: 10px;
-        }
-
+        /* ── Code / pre ── */
         code {
             background-color: #ecf0f1;
-            padding: 2px 4px;
+            padding: 2px 5px;
             border-radius: 4px;
+            font-size: 0.88em;
         }
 
         pre {
-            background-color: #2d2d2d;
-            color: #f8f8f2;
+            background-color: #1e2533;
+            color: #e2e8f0;
             padding: 16px;
-            border-radius: 6px;
+            border-radius: 8px;
             overflow-x: auto;
-            font-size: 13px;
-            line-height: 1.5;
+            font-size: 12.5px;
+            line-height: 1.6;
+            margin: 10px 0 0;
         }
 
         pre code {
@@ -82,170 +208,346 @@
             padding: 0;
             border-radius: 0;
             color: inherit;
+            font-size: inherit;
         }
 
-        .viewer-button {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #667eea;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            text-decoration: none;
+        /* ── URL list ── */
+        .url-list {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0 0;
+        }
+
+        .url-list li {
+            margin-bottom: 6px;
+            font-size: 0.88rem;
+            overflow-wrap: anywhere;
+        }
+
+        /* ── Patch flow ── */
+        .patch-flow {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 12px 0;
+            font-size: 0.88rem;
+        }
+
+        .patch-node {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-family: monospace;
+            color: #1565c0;
+        }
+
+        .patch-arrow {
+            color: #90a4ae;
+            font-size: 1.2rem;
+        }
+
+        .patch-result {
+            background: #e8f5e9;
+            border: 1px solid #a5d6a7;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-family: monospace;
+            color: #2e7d32;
+        }
+
+        /* ── Stats table ── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 24px;
+            font-size: 0.9rem;
+        }
+
+        .stats-grid dt {
+            color: #666;
+            font-size: 0.82rem;
+        }
+
+        .stats-grid dd {
+            margin: 0 0 4px;
             font-weight: 600;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s;
-            z-index: 1000;
         }
 
-        .viewer-button:hover {
-            background: #5568d3;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(102, 126, 234, 0.3);
-            text-decoration: none;
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 0.88rem;
         }
 
-        @media (max-width: 800px) {
-            .container {
-                padding: 0 10px;
-            }
+        th, td {
+            text-align: left;
+            padding: 6px 10px;
+            border-bottom: 1px solid #eee;
+        }
 
-            .viewer-button {
-                top: 10px;
-                right: 10px;
-                padding: 10px 16px;
-                font-size: 14px;
-            }
+        th { color: #666; font-weight: 600; }
+
+        /* ── Callout / info box ── */
+        .callout {
+            background: #fff3cd;
+            border-left: 4px solid #f59e0b;
+            border-radius: 0 8px 8px 0;
+            padding: 12px 16px;
+            font-size: 0.9rem;
+            margin: 12px 0 0;
+        }
+
+        .callout.info {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+
+        /* ── Section divider label ── */
+        .section-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #999;
+            margin: 32px 0 10px;
+        }
+
+        ul {
+            padding-left: 18px;
+            margin: 8px 0 0;
+            line-height: 1.7;
+        }
+
+        p { line-height: 1.6; margin: 8px 0; }
+
+        @media (max-width: 620px) {
+            .key-box, .card-grid { grid-template-columns: 1fr; }
+            .viewer-banner { flex-direction: column; text-align: center; }
+            header h1 { font-size: 1.4rem; }
         }
     </style>
 </head>
 
 <body>
-    <a href="/viewer" class="viewer-button">🔍 Open Viewer</a>
-    <h1>Welcome to the IoT Ephemeral Value Store Server</h1>
+    <header>
+        <h1>📡 IoT Ephemeral Value Store</h1>
+        <p>Temporarily store and retrieve sensor values via plain HTTP &mdash; no registration, no setup.</p>
+    </header>
+
     <div class="container">
-        <p>This service allows you to temporarily store and retrieve IoT data via HTTP. Below are some examples of how
-            you can interact with the server:</p>
 
-        <h2>Getting Started</h2>
-        <p>
-            Just use this url generated just for you: <br>
-            <h4>Upload data</h4>
-            <a class="dynamic-link" data-path="/u/{{.UploadKey}}/?name=value">/u/{{.UploadKey}}/?name=value</a><br>
-            <h4>Upload data as Patch (to combine multiple values)</h4>
-            <a class="dynamic-link" data-path="/patch/{{.UploadKey}}/?name1=value">/u/{{.UploadKey}}/?name=value</a><br>
-            <a class="dynamic-link" data-path="/patch/{{.UploadKey}}/location_1/?name=value">/u/{{.UploadKey}}/?name=value</a><br>
-            <a class="dynamic-link" data-path="/patch/{{.UploadKey}}/location_2/?name=value">/u/{{.UploadKey}}/?name=value</a><br>
-            <h4>Download data</h4>
-            and access it with<br>
-            <a class="dynamic-link" data-path="/d/{{.DownloadKey}}/plain/name">/d/{{.DownloadKey}}/plain/name</a><br>
-            or in json with<br>
-            <a class="dynamic-link" data-path="/d/{{.DownloadKey}}/json">/d/{{.DownloadKey}}/json</a>
-            <h4>Delete data (or wait for retention time)</h4>
-            <a class="dynamic-link" data-path="/delete/{{.UploadKey}}">/u/{{.UploadKey}}/?name=value</a><br>
-        </p>
+        <!-- ── Viewer ── -->
+        <div class="viewer-banner">
+            <div class="viewer-banner-text">
+                <h2>🔍 Viewer &amp; Key Manager</h2>
+                <p>Monitor live values, manage your key pairs, and inspect all stored data in one place.</p>
+            </div>
+            <a href="/viewer" class="viewer-banner-btn">Open Viewer →</a>
+        </div>
 
-        <h2>Advanded mode (base64)</h2>
-        <p>
-            <h4>Upload data base64url encoded</h4>
-            <a class="dynamic-link" data-path="/u/{{.UploadKey}}/?some_name=SGFsbG8gV2VsdCE">/u/{{.UploadKey}}/?some_name=SGFsbG8gV2VsdCE</a><br>
-            <h4>Download data base64url decoded</h4>
-            <a class="dynamic-link" data-path="/d/{{.DownloadKey}}/plain-from-base64url/some_name">/d/{{.DownloadKey}}/plain-from-base64url/some_name</a><br>
-        </p>
+        <!-- ── Key Pair ── -->
+        <div class="section-label">Your personal key pair (generated for this page load)</div>
+        <div class="key-box">
+            <div class="key-card upload">
+                <div class="key-label">🔑 Upload Key &nbsp;(keep secret)</div>
+                <div class="key-value">{{.UploadKey}}</div>
+                <div class="key-note">Used to write &amp; delete data. Never share this key.</div>
+            </div>
+            <div class="key-card download">
+                <div class="key-label">📥 Download Key &nbsp;(shareable)</div>
+                <div class="key-value">{{.DownloadKey}}</div>
+                <div class="key-note">Read-only. Safe to share with dashboards, Home Assistant, etc.</div>
+            </div>
+        </div>
+        <div class="callout info" style="margin-bottom:28px">
+            💡 Generate a permanent key pair anytime: <code>GET <a href="/kp">/kp</a></code> &nbsp;&mdash;&nbsp;
+            bookmark the result and reuse the keys across all your devices.
+        </div>
 
-        <h2>Server Settings</h2>
-        <ul>
-            <li><strong>Software Version:</strong> {{.Version}}</li>
-            <li><strong>Software BuildTime:</strong> {{.BuildTime}}</li>
-            <li><strong>Data retention:</strong> {{.DataRetention}}</li>
-        </ul>
+        <!-- ── Upload ── -->
+        <div class="section-label">1 · Upload data</div>
+        <div class="card">
+            <h2>⬆️ Upload &mdash; replace all values at once</h2>
+            <p>Send any number of key=value pairs as query parameters. Each upload <strong>replaces</strong> all previously stored values.</p>
+            <h3>via browser</h3>
+            <ul class="url-list">
+                <li><a class="dynamic-link" data-path="/u/{{.UploadKey}}/?temp=23&hum=45">/u/{{.UploadKey}}/?temp=23&amp;hum=45</a></li>
+            </ul>
+            <h3>via curl (works from any microcontroller or script)</h3>
+            <pre><code>curl "<span class="base-url-placeholder"></span>/u/{{.UploadKey}}/?temp=23&hum=45"</code></pre>
+        </div>
 
-        <h2>Server Stats (REST API)</h2>
-        <ul>
-            <li><strong>Uptime:</strong> {{.Uptime}}</li>
-            <li><strong>Download/Upload Count since Start:</strong> {{.StateData.DownloadCount}}/{{.StateData.UploadCount}}</li>
-            <li><strong>Download/Upload Count last 24h:</strong> {{.StateData.Last24hDownloadCount}}/{{.StateData.Last24hUploadCount}}</li>
-            <li><strong>HTTP Error Count since Start:</strong> {{.StateData.HTTPErrorCount}}</li>
-            <li><strong>HTTP Error Count last 24h:</strong> {{.StateData.Last24hHTTPErrorCount}}</li>
-            <li><strong>Rate Limit Hit Count:</strong> {{.StateData.RateLimitHitCount}}</li>
-        </ul>
+        <!-- ── Patch ── -->
+        <div class="section-label">2 · Patch data (merge from multiple devices)</div>
+        <div class="card">
+            <h2>🔀 Patch &mdash; merge values from multiple sources</h2>
+            <p>
+                Unlike a plain upload, <strong>Patch keeps all existing values</strong> and only updates the fields you provide.
+                Use an optional path segment to namespace values from different devices or rooms under the same upload key.
+            </p>
+            <div class="patch-flow">
+                <div class="patch-node">sensor_a<br><small>temp=23</small></div>
+                <div class="patch-arrow">+</div>
+                <div class="patch-node">sensor_b<br><small>voltage=230</small></div>
+                <div class="patch-arrow">→</div>
+                <div class="patch-result">merged JSON<br><small>temp=23, voltage=230</small></div>
+            </div>
+            <h3>via curl</h3>
+            <pre><code># Room 1 sensor pushes temperature
+curl "<span class="base-url-placeholder"></span>/patch/{{.UploadKey}}/living_room/?temp=23&hum=45"
 
-        <h2>Server Stats (MCP)</h2>
-        <ul>
-            <li><strong>Download/Upload Count since Start:</strong> {{.MCPStateData.DownloadCount}}/{{.MCPStateData.UploadCount}}</li>
-            <li><strong>Download/Upload Count last 24h:</strong> {{.MCPStateData.Last24hDownloadCount}}/{{.MCPStateData.Last24hUploadCount}}</li>
-            <li><strong>HTTP Error Count since Start:</strong> {{.MCPStateData.HTTPErrorCount}}</li>
-            <li><strong>HTTP Error Count last 24h:</strong> {{.MCPStateData.Last24hHTTPErrorCount}}</li>
-        </ul>
-        
-        <h2>Rate Limit Stats</h2>
-        {{if len .StateData.RateLimitedIPs}}
-            <table>
-                <tr>
-                    <th>IP</th>
-                    <th>Request Count</th>
-                </tr>
-                {{range .StateData.RateLimitedIPs}}
-                <tr>
-                    <td>{{.IP}}</td>
-                    <td>{{.RequestCount}}</td>
-                </tr>
-                {{end}}
-            </table>
-        {{else}}
-            <p>No records</p>
-        {{end}}
+# Room 2 sensor pushes voltage independently
+curl "<span class="base-url-placeholder"></span>/patch/{{.UploadKey}}/basement/?voltage=230"
 
-        <h2>API Usage</h2>
-        <ul>
-            <li><strong>Create Key Pair:</strong> <code>GET /kp</code></li>
-            <li><strong>Upload Data:</strong> <code>GET /u/{upload-key}/?temp=23&hum=43</code></li>
-            <li><strong>Download Data as JSON:</strong> <code>GET /d/{download-key}/json</code></li>
-            <li><strong>Download Specific Data Field:</strong> <code>GET /d/{download-key}/plain/{param}</code></li>
-        </ul>
+# Deeply nested paths are supported too
+curl "<span class="base-url-placeholder"></span>/patch/{{.UploadKey}}/house_2/floor1/room3/?co2=420"</code></pre>
+            <div class="callout">
+                All three calls use the <strong>same upload key</strong> but different path namespaces.
+                The download key returns a single merged JSON containing all values.
+            </div>
+        </div>
 
-        <h2>Advanced API Usage - Patch with same {upload-key}</h2>
-        <ul>
-            <li><strong>Patch Data:</strong> <code>GET /patch/{upload-key}/house_1/?temp=23&hum=43</code></li>
-            <li><strong>Patch Data:</strong> <code>GET /patch/{upload-key}/house_1/?voltage=230</code></li>
-            <li><strong>Patch Data:</strong> <code>GET /patch/{upload-key}/house_2/basement/room1/?voltage=230</code>
-            </li>
-        </ul>
+        <!-- ── Download ── -->
+        <div class="section-label">3 · Download data</div>
+        <div class="card">
+            <h2>⬇️ Download &mdash; read values</h2>
+            <h3>Single value (plain text)</h3>
+            <p>Ideal for Home Assistant <code>rest</code> sensors or simple shell scripts.</p>
+            <ul class="url-list">
+                <li><a class="dynamic-link" data-path="/d/{{.DownloadKey}}/plain/temp">/d/{{.DownloadKey}}/plain/temp</a></li>
+            </ul>
+            <pre><code>curl "<span class="base-url-placeholder"></span>/d/{{.DownloadKey}}/plain/temp"</code></pre>
 
-        <h2>Tipps</h2>
+            <h3>All values (JSON)</h3>
+            <p>Returns the complete merged data object.</p>
+            <ul class="url-list">
+                <li><a class="dynamic-link" data-path="/d/{{.DownloadKey}}/json">/d/{{.DownloadKey}}/json</a></li>
+            </ul>
+            <pre><code>curl "<span class="base-url-placeholder"></span>/d/{{.DownloadKey}}/json"</code></pre>
+            <h3>Delete data (or just wait for the retention period to expire)</h3>
+            <ul class="url-list">
+                <li><a class="dynamic-link" data-path="/delete/{{.UploadKey}}">/delete/{{.UploadKey}}</a></li>
+            </ul>
+        </div>
 
-        <p>
-            The download key can be derived from the upload key. Strip the <code>u_</code> prefix first, then hash:
-            <code>echo -n "5347d61e218f9a7988292c82ddfe347a276fcb82dd2df8aaad733c8970379f41" | sha256sum</code>
-        </p>
+        <!-- ── Advanced ── -->
+        <div class="section-label">Advanced &middot; Base64 encoding</div>
+        <div class="card">
+            <h2>🔡 Base64URL values</h2>
+            <p>Upload values base64url-encoded and let the server decode them on download &mdash; useful for values containing special characters.</p>
+            <div class="card-grid">
+                <div>
+                    <h3>Upload (base64url encoded value)</h3>
+                    <ul class="url-list">
+                        <li><a class="dynamic-link" data-path="/u/{{.UploadKey}}/?label=SGFsbG8gV2VsdCE">/u/{{.UploadKey}}/?label=SGFsbG8gV2VsdCE</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3>Download (server decodes automatically)</h3>
+                    <ul class="url-list">
+                        <li><a class="dynamic-link" data-path="/d/{{.DownloadKey}}/plain-from-base64url/label">/d/{{.DownloadKey}}/plain-from-base64url/label</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="callout info" style="margin-top:12px">
+                The download key is derived from the upload key: strip the <code>u_</code> prefix, then SHA-256 hash it.<br>
+                <code>echo -n "5347d61e..." | sha256sum</code>
+            </div>
+        </div>
 
-        <h2>MCP Server Configuration</h2>
-        <p>This server supports the <a href="https://modelcontextprotocol.io/">Model Context Protocol (MCP)</a>. Add it to your MCP client (e.g. VS Code, Claude Desktop) using the following configuration:</p>
-        <pre><code>{
+        <!-- ── MCP ── -->
+        <div class="section-label">MCP Integration</div>
+        <div class="card">
+            <h2>🤖 Model Context Protocol (MCP)</h2>
+            <p>This server exposes an <a href="https://modelcontextprotocol.io/">MCP</a> endpoint. Add it to VS Code, Claude Desktop, or any MCP-compatible client:</p>
+            <pre><code>{
   "mcpServers": {
     "IoT-Ephemeral-Value-Store-Server": {
       "type": "http",
       "url": "{{.BaseURL}}/mcp",
       "headers": {},
-      "tools": [
-        "*"
-      ]
+      "tools": ["*"]
     }
   }
 }</code></pre>
+        </div>
 
-        <h2>GitHub Repository</h2>
-        <p>You can find the source code and contribute to this project on GitHub:</p>
-        <a href="https://github.com/dhcgn/iot-ephemeral-value-store">IoT Ephemeral Value Store Server on GitHub</a>
+        <!-- ── Server info ── -->
+        <div class="section-label">Server information</div>
+        <div class="card-grid">
+            <div class="card" style="margin-bottom:0">
+                <h2>⚙️ Settings</h2>
+                <dl class="stats-grid">
+                    <dt>Version</dt><dd>{{.Version}}</dd>
+                    <dt>Build time</dt><dd>{{.BuildTime}}</dd>
+                    <dt>Data retention</dt><dd>{{.DataRetention}}</dd>
+                    <dt>Uptime</dt><dd>{{.Uptime}}</dd>
+                </dl>
+            </div>
+            <div class="card" style="margin-bottom:0">
+                <h2>📊 Stats (REST API)</h2>
+                <dl class="stats-grid">
+                    <dt>Downloads / Uploads (total)</dt>
+                    <dd>{{.StateData.DownloadCount}} / {{.StateData.UploadCount}}</dd>
+                    <dt>Downloads / Uploads (24h)</dt>
+                    <dd>{{.StateData.Last24hDownloadCount}} / {{.StateData.Last24hUploadCount}}</dd>
+                    <dt>HTTP errors (total / 24h)</dt>
+                    <dd>{{.StateData.HTTPErrorCount}} / {{.StateData.Last24hHTTPErrorCount}}</dd>
+                    <dt>Rate limit hits</dt>
+                    <dd>{{.StateData.RateLimitHitCount}}</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+            <h2>📊 Stats (MCP)</h2>
+            <dl class="stats-grid">
+                <dt>Downloads / Uploads (total)</dt>
+                <dd>{{.MCPStateData.DownloadCount}} / {{.MCPStateData.UploadCount}}</dd>
+                <dt>Downloads / Uploads (24h)</dt>
+                <dd>{{.MCPStateData.Last24hDownloadCount}} / {{.MCPStateData.Last24hUploadCount}}</dd>
+                <dt>HTTP errors (total / 24h)</dt>
+                <dd>{{.MCPStateData.HTTPErrorCount}} / {{.MCPStateData.Last24hHTTPErrorCount}}</dd>
+            </dl>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+            <h2>🚦 Rate-limited IPs</h2>
+            {{if len .StateData.RateLimitedIPs}}
+            <table>
+                <tr><th>IP</th><th>Request Count</th></tr>
+                {{range .StateData.RateLimitedIPs}}
+                <tr><td>{{.IP}}</td><td>{{.RequestCount}}</td></tr>
+                {{end}}
+            </table>
+            {{else}}
+            <p style="color:#999;margin:0">No rate-limited IPs.</p>
+            {{end}}
+        </div>
+
+        <!-- ── Footer ── -->
+        <p style="text-align:center;margin-top:32px;font-size:0.85rem;color:#999">
+            <a href="https://github.com/dhcgn/iot-ephemeral-value-store">IoT Ephemeral Value Store on GitHub</a>
+        </p>
+
     </div>
+
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             const baseUrl = window.location.origin;
+
+            // Set dynamic hrefs and text for template-based links
             document.querySelectorAll('a.dynamic-link').forEach(link => {
                 const path = link.getAttribute('data-path');
                 link.href = baseUrl + path;
                 link.textContent = baseUrl + path;
+            });
+
+            // Fill in base URL placeholders inside <pre> blocks
+            document.querySelectorAll('.base-url-placeholder').forEach(el => {
+                el.textContent = baseUrl;
             });
         });
     </script>
