@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/url"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -97,8 +96,6 @@ func (c Config) GenerateKeyPairHandler(ctx context.Context, req *mcp.CallToolReq
 	result := map[string]interface{}{
 		"upload_key":   uploadKey,
 		"download_key": downloadKey,
-		"upload_url":   fmt.Sprintf("%s/u/%s?param=value", c.ServerHost, uploadKey),
-		"download_url": fmt.Sprintf("%s/d/%s/json", c.ServerHost, downloadKey),
 		"message":      "Key pair generated successfully. Use the upload key to store data and the download key to retrieve it. The upload key must be kept secret.",
 	}
 
@@ -121,23 +118,15 @@ func (c Config) UploadDataHandler(ctx context.Context, req *mcp.CallToolRequest,
 		return nil, nil, ctx.Err()
 	}
 
-	downloadKey, _, err := c.DataService.Upload(params.UploadKey, params.Parameters)
+	_, _, err := c.DataService.Upload(params.UploadKey, params.Parameters)
 	if err != nil {
 		c.StatsInstance.IncrementHTTPErrors()
 		return nil, nil, err
 	}
 	c.StatsInstance.IncrementUploads()
 
-	// Build parameter URLs
-	paramURLs := make(map[string]string)
-	for k := range params.Parameters {
-		paramURLs[k] = fmt.Sprintf("%s/d/%s/plain/%s", c.ServerHost, downloadKey, url.PathEscape(k))
-	}
-
 	result := map[string]interface{}{
 		"message":         "Data uploaded successfully",
-		"download_url":    fmt.Sprintf("%s/d/%s/json", c.ServerHost, downloadKey),
-		"parameter_urls":  paramURLs,
 		"parameter_count": len(params.Parameters),
 	}
 
@@ -160,28 +149,15 @@ func (c Config) PatchDataHandler(ctx context.Context, req *mcp.CallToolRequest, 
 		return nil, nil, ctx.Err()
 	}
 
-	downloadKey, _, err := c.DataService.Patch(params.UploadKey, params.Path, params.Parameters)
+	_, _, err := c.DataService.Patch(params.UploadKey, params.Path, params.Parameters)
 	if err != nil {
 		c.StatsInstance.IncrementHTTPErrors()
 		return nil, nil, err
 	}
 	c.StatsInstance.IncrementUploads()
 
-	// Build parameter URLs
-	paramURLs := make(map[string]string)
-	var pathPrefix string
-	if params.Path != "" {
-		pathPrefix = params.Path + "/"
-	}
-	for k := range params.Parameters {
-		paramPath := pathPrefix + k
-		paramURLs[k] = fmt.Sprintf("%s/d/%s/plain/%s", c.ServerHost, downloadKey, url.PathEscape(paramPath))
-	}
-
 	result := map[string]interface{}{
 		"message":         "Data merged successfully",
-		"download_url":    fmt.Sprintf("%s/d/%s/json", c.ServerHost, downloadKey),
-		"parameter_urls":  paramURLs,
 		"path":            params.Path,
 		"parameter_count": len(params.Parameters),
 	}
