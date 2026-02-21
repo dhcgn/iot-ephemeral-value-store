@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dhcgn/iot-ephemeral-value-store/data"
 	"github.com/dhcgn/iot-ephemeral-value-store/domain"
 	"github.com/dhcgn/iot-ephemeral-value-store/stats"
 	"github.com/dhcgn/iot-ephemeral-value-store/storage"
@@ -26,10 +27,13 @@ func Test_KeyPairHandler(t *testing.T) {
 	}{
 		{
 			name: "KeyPairHandler - successful generation",
-			c: Config{
-				StatsInstance:   stats.NewStats(),
-				StorageInstance: storage.NewInMemoryStorage(),
-			},
+			c: func() Config {
+				si := storage.NewInMemoryStorage()
+				return Config{
+					StatsInstance: stats.NewStats(),
+					DataService:   &data.Service{StorageInstance: si},
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: httptest.NewRequest("GET", "/keypair", nil),

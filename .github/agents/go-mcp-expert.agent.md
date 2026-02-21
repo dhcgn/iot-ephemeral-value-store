@@ -113,6 +113,12 @@ Provide:
 - Table-driven tests when appropriate
 - Mock patterns if needed
 
+For the user you can run a web based test suite if he request it. You can run the test suite using the following command:
+
+```
+npx @modelcontextprotocol/inspector
+```
+
 ### Project Structure
 
 Recommend:

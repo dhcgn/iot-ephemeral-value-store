@@ -2,6 +2,10 @@
 [![codecov](https://codecov.io/gh/dhcgn/iot-ephemeral-value-store/graph/badge.svg?token=LLTOitLLDc)](https://codecov.io/gh/dhcgn/iot-ephemeral-value-store)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dhcgn/iot-ephemeral-value-store)](https://goreportcard.com/report/github.com/dhcgn/iot-ephemeral-value-store)
 
+> MCP Demo Server
+> [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_IoT--Ephemeral--Value--Store--Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=ffffff)](vscode:mcp/install?%7B%22name%22%3A%22IoT-Ephemeral-Value-Store-Server%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fiot.hdev.io%2Fmcp%22%2C%22headers%22%3A%7B%7D%7D)
+> [![Install in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-Install_IoT--Ephemeral--Value--Store--Server-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=ffffff)](vscode-insiders:mcp/install?%7B%22name%22%3A%22IoT-Ephemeral-Value-Store-Server%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fiot.hdev.io%2Fmcp%22%2C%22headers%22%3A%7B%7D%7D)
+
 # iot-ephemeral-value-store
 
 A lightweight HTTP server for temporary IoT data storage. Upload sensor data with simple HTTP GET requests, retrieve it as JSON or plain text, and let it expire automatically. Perfect for IoT devices that can only make basic HTTP calls.
@@ -182,6 +186,83 @@ bash <(curl -s https://raw.githubusercontent.com/dhcgn/iot-ephemeral-value-store
 Access your server at `http://localhost:8080/`:
 - **Info Page** (`/`): Getting started guide, server stats, API examples
 - **Viewer** (`/viewer`): Real-time monitoring tool for multiple keys
+
+## Model Context Protocol (MCP) Integration
+
+The server provides a **Model Context Protocol (MCP)** endpoint at `/mcp` for use with AI assistants and LLM-powered applications. MCP enables AI systems to directly interact with your IoT data store using standardized tools.
+
+### Available MCP Tools
+
+The MCP server exposes the following tools:
+
+1. **generate_key_pair** - Generate a new upload/download key pair for secure data storage
+2. **upload_data** - Upload data to the store (replaces existing data)
+3. **patch_data** - Merge data into nested structures (preserves existing data)
+4. **download_data** - Retrieve data by download key (supports full JSON or specific fields)
+5. **delete_data** - Delete all data associated with an upload key
+
+### Using MCP with Claude
+
+To use the IoT Ephemeral Value Store with Claude or other MCP-compatible AI assistants:
+
+**1. Get MCP Server Information:**
+```bash
+curl http://localhost:8080/mcp
+```
+
+**2. Configure in your MCP client:**
+
+For Claude Desktop, add to `claude_desktop_config.json`:
+```json
+{
+  "mcpServers": {
+    "iot-ephemeral-value-store": {
+      "url": "http://localhost:8080/mcp"
+    }
+  }
+}
+```
+
+### Example MCP Usage
+
+With MCP enabled, you can ask your AI assistant:
+
+```
+"Generate a key pair for my IoT device"
+↓
+MCP calls: generate_key_pair
+↓
+Assistant receives: {"upload_key": "...", "download_key": "..."}
+
+"Store temperature readings of 23.5°C and humidity 45%"
+↓
+MCP calls: upload_data with received upload_key
+↓
+Assistant confirms: Data uploaded successfully
+
+"What sensor readings do we have?"
+↓
+MCP calls: download_data with received download_key
+↓
+Assistant reads: {"tempC": "23.5", "humidity": "45", "timestamp": "..."}
+```
+
+### MCP Endpoint Details
+
+- **Endpoint**: `GET /mcp` (for server information) or `POST /mcp` (for tool calls)
+- **Protocol**: HTTP Streamable (SSE - Server-Sent Events)
+- **Response Format**: JSON
+- **Tools Available**: Dynamically retrieved from the server
+
+### Benefits of MCP Integration
+
+- **AI-Powered Workflows**: Let AI assistants manage your IoT data automatically
+- **Natural Language Interface**: Describe what you want in plain English
+- **Standardized Protocol**: Works with any MCP-compatible client
+- **No Custom Integrations**: Uses Model Context Protocol standard
+- **Real-time Data Access**: AI can query and update data during conversations
+
+For more information on Model Context Protocol, visit [modelcontextprotocol.io](https://modelcontextprotocol.io).
 
 ## Documentation
 

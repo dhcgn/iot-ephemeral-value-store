@@ -21,6 +21,5 @@ iot-ephemeral-value-store
 # Go workspace file
 go.work
 
-/data
+debug_db_store/
 /build
-coverage.txt

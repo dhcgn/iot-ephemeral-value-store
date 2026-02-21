@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dhcgn/iot-ephemeral-value-store/data"
 	"github.com/dhcgn/iot-ephemeral-value-store/stats"
 	"github.com/dhcgn/iot-ephemeral-value-store/storage"
 	"github.com/gorilla/mux"
@@ -27,10 +28,13 @@ func Test_UploadHandler(t *testing.T) {
 	}{
 		{
 			name: "UploadHandler - invalid upload key",
-			c: Config{
-				StatsInstance:   stats.NewStats(),
-				StorageInstance: storage.NewInMemoryStorage(),
-			},
+			c: func() Config {
+				si := storage.NewInMemoryStorage()
+				return Config{
+					StatsInstance: stats.NewStats(),
+					DataService:   &data.Service{StorageInstance: si},
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
@@ -43,15 +47,18 @@ func Test_UploadHandler(t *testing.T) {
 			},
 			expectedStatus:         http.StatusBadRequest,
 			expectedBodyContains:   []string{"uploadKey must be a 256 bit hex string"},
-			expectedHTTPErrorCount: 0,
+			expectedHTTPErrorCount: 1,
 			expectedUploadCount:    0,
 		},
 		{
 			name: "UploadHandler - valid upload key",
-			c: Config{
-				StatsInstance:   stats.NewStats(),
-				StorageInstance: storage.NewInMemoryStorage(),
-			},
+			c: func() Config {
+				si := storage.NewInMemoryStorage()
+				return Config{
+					StatsInstance: stats.NewStats(),
+					DataService:   &data.Service{StorageInstance: si},
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
@@ -133,10 +140,13 @@ func Test_UploadAndPatchHandler(t *testing.T) {
 	}{
 		{
 			name: "UploadAndPatchHandler - invalid upload key",
-			c: Config{
-				StatsInstance:   stats.NewStats(),
-				StorageInstance: storage.NewInMemoryStorage(),
-			},
+			c: func() Config {
+				si := storage.NewInMemoryStorage()
+				return Config{
+					StatsInstance: stats.NewStats(),
+					DataService:   &data.Service{StorageInstance: si},
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
@@ -150,15 +160,18 @@ func Test_UploadAndPatchHandler(t *testing.T) {
 			},
 			expectedStatus:         http.StatusBadRequest,
 			expectedBodyContains:   []string{"uploadKey must be a 256 bit hex string"},
-			expectedHTTPErrorCount: 0,
+			expectedHTTPErrorCount: 1,
 			expectedUploadCount:    0,
 		},
 		{
 			name: "UploadAndPatchHandler - valid upload key",
-			c: Config{
-				StatsInstance:   stats.NewStats(),
-				StorageInstance: storage.NewInMemoryStorage(),
-			},
+			c: func() Config {
+				si := storage.NewInMemoryStorage()
+				return Config{
+					StatsInstance: stats.NewStats(),
+					DataService:   &data.Service{StorageInstance: si},
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {

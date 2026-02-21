@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dhcgn/iot-ephemeral-value-store/data"
 	"github.com/dhcgn/iot-ephemeral-value-store/stats"
 	"github.com/dhcgn/iot-ephemeral-value-store/storage"
 	"github.com/gorilla/mux"
@@ -63,10 +64,13 @@ func Test_PlainDownloadHandler(t *testing.T) {
 	}{
 		{
 			name: "PlainDownloadHandler - invalid download key",
-			c: Config{
-				StatsInstance:   stats.NewStats(),
-				StorageInstance: storage.NewInMemoryStorage(),
-			},
+			c: func() Config {
+				si := storage.NewInMemoryStorage()
+				return Config{
+					StatsInstance: stats.NewStats(),
+					DataService:   &data.Service{StorageInstance: si},
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
@@ -85,15 +89,15 @@ func Test_PlainDownloadHandler(t *testing.T) {
 		},
 		{
 			name: "PlainDownloadHandler - valid download key, invalid param",
-			c: Config{
-				StatsInstance: stats.NewStats(),
-				StorageInstance: func() storage.Storage {
-					s := storage.NewInMemoryStorage()
-					data := map[string]interface{}{"key": "value"}
-					s.Store("validKey", data)
-					return s
-				}(),
-			},
+			c: func() Config {
+				s := storage.NewInMemoryStorage()
+				d := map[string]interface{}{"key": "value"}
+				s.Store("validKey", d)
+				return Config{
+					StatsInstance: stats.NewStats(),
+					DataService:   &data.Service{StorageInstance: s},
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
@@ -112,15 +116,15 @@ func Test_PlainDownloadHandler(t *testing.T) {
 		},
 		{
 			name: "PlainDownloadHandler - valid download key and param",
-			c: Config{
-				StatsInstance: stats.NewStats(),
-				StorageInstance: func() storage.Storage {
-					s := storage.NewInMemoryStorage()
-					data := map[string]interface{}{"key": "value"}
-					s.Store("validKey", data)
-					return s
-				}(),
-			},
+			c: func() Config {
+				s := storage.NewInMemoryStorage()
+				d := map[string]interface{}{"key": "value"}
+				s.Store("validKey", d)
+				return Config{
+					StatsInstance: stats.NewStats(),
+					DataService:   &data.Service{StorageInstance: s},
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
@@ -139,15 +143,14 @@ func Test_PlainDownloadHandler(t *testing.T) {
 		},
 		{
 			name: "PlainDownloadHandler - error decoding JSON",
-			c: Config{
-				StatsInstance: stats.NewStats(),
-				StorageInstance: func() storage.Storage {
-					s := storage.NewInMemoryStorage()
-					// Store invalid JSON data
-					s.StoreRawForTesting("validKey", []byte(`{"key": "value"`)) // Missing closing brace
-					return s
-				}(),
-			},
+			c: func() Config {
+				s := storage.NewInMemoryStorage()
+				s.StoreRawForTesting("validKey", []byte(`{"key": "value"`))
+				return Config{
+					StatsInstance: stats.NewStats(),
+					DataService:   &data.Service{StorageInstance: s},
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
@@ -166,15 +169,15 @@ func Test_PlainDownloadHandler(t *testing.T) {
 		},
 		{
 			name: "PlainDownloadHandler - invalid parameter path",
-			c: Config{
-				StatsInstance: stats.NewStats(),
-				StorageInstance: func() storage.Storage {
-					s := storage.NewInMemoryStorage()
-					data := map[string]interface{}{"key": "value"}
-					s.Store("validKey", data)
-					return s
-				}(),
-			},
+			c: func() Config {
+				s := storage.NewInMemoryStorage()
+				d := map[string]interface{}{"key": "value"}
+				s.Store("validKey", d)
+				return Config{
+					StatsInstance: stats.NewStats(),
+					DataService:   &data.Service{StorageInstance: s},
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
@@ -193,15 +196,15 @@ func Test_PlainDownloadHandler(t *testing.T) {
 		},
 		{
 			name: "PlainDownloadHandler - error decoding base64url",
-			c: Config{
-				StatsInstance: stats.NewStats(),
-				StorageInstance: func() storage.Storage {
-					s := storage.NewInMemoryStorage()
-					data := map[string]interface{}{"key": "invalid_base64"}
-					s.Store("validKey", data)
-					return s
-				}(),
-			},
+			c: func() Config {
+				s := storage.NewInMemoryStorage()
+				d := map[string]interface{}{"key": "invalid_base64"}
+				s.Store("validKey", d)
+				return Config{
+					StatsInstance: stats.NewStats(),
+					DataService:   &data.Service{StorageInstance: s},
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
@@ -221,16 +224,16 @@ func Test_PlainDownloadHandler(t *testing.T) {
 		},
 		{
 			name: "PlainDownloadHandler - decoding base64url",
-			c: Config{
-				StatsInstance: stats.NewStats(),
-				StorageInstance: func() storage.Storage {
-					s := storage.NewInMemoryStorage()
-					base64string := base64.URLEncoding.EncodeToString([]byte("Hallo Welt!"))
-					data := map[string]interface{}{"key": base64string}
-					s.Store("validKey", data)
-					return s
-				}(),
-			},
+			c: func() Config {
+				s := storage.NewInMemoryStorage()
+				base64string := base64.URLEncoding.EncodeToString([]byte("Hallo Welt!"))
+				d := map[string]interface{}{"key": base64string}
+				s.Store("validKey", d)
+				return Config{
+					StatsInstance: stats.NewStats(),
+					DataService:   &data.Service{StorageInstance: s},
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
@@ -294,10 +297,13 @@ func Test_DownloadHandler(t *testing.T) {
 	}{
 		{
 			name: "DownloadHandler - invalid download key",
-			c: Config{
-				StatsInstance:   stats.NewStats(),
-				StorageInstance: storage.NewInMemoryStorage(),
-			},
+			c: func() Config {
+				si := storage.NewInMemoryStorage()
+				return Config{
+					StatsInstance: stats.NewStats(),
+					DataService:   &data.Service{StorageInstance: si},
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
@@ -315,15 +321,15 @@ func Test_DownloadHandler(t *testing.T) {
 		},
 		{
 			name: "DownloadHandler - valid download key",
-			c: Config{
-				StatsInstance: stats.NewStats(),
-				StorageInstance: func() storage.Storage {
-					s := storage.NewInMemoryStorage()
-					data := map[string]interface{}{"key": "value"}
-					s.Store("validKey", data)
-					return s
-				}(),
-			},
+			c: func() Config {
+				s := storage.NewInMemoryStorage()
+				d := map[string]interface{}{"key": "value"}
+				s.Store("validKey", d)
+				return Config{
+					StatsInstance: stats.NewStats(),
+					DataService:   &data.Service{StorageInstance: s},
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
@@ -381,11 +387,14 @@ func Test_DownloadRootHandler(t *testing.T) {
 	}{
 		{
 			name: "DownloadRootHandler - invalid download key",
-			c: Config{
-				StatsInstance:    stats.NewStats(),
-				StorageInstance:  storage.NewInMemoryStorage(),
-				DownloadTemplate: getTestDownloadTemplate(),
-			},
+			c: func() Config {
+				si := storage.NewInMemoryStorage()
+				return Config{
+					StatsInstance:    stats.NewStats(),
+					DataService:      &data.Service{StorageInstance: si},
+					DownloadTemplate: getTestDownloadTemplate(),
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
@@ -403,16 +412,16 @@ func Test_DownloadRootHandler(t *testing.T) {
 		},
 		{
 			name: "DownloadRootHandler - valid download key with single field",
-			c: Config{
-				StatsInstance: stats.NewStats(),
-				StorageInstance: func() storage.Storage {
-					s := storage.NewInMemoryStorage()
-					data := map[string]interface{}{"name": "value"}
-					s.Store("validKey", data)
-					return s
-				}(),
-				DownloadTemplate: getTestDownloadTemplate(),
-			},
+			c: func() Config {
+				s := storage.NewInMemoryStorage()
+				d := map[string]interface{}{"name": "value"}
+				s.Store("validKey", d)
+				return Config{
+					StatsInstance:    stats.NewStats(),
+					DataService:      &data.Service{StorageInstance: s},
+					DownloadTemplate: getTestDownloadTemplate(),
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
@@ -434,20 +443,20 @@ func Test_DownloadRootHandler(t *testing.T) {
 		},
 		{
 			name: "DownloadRootHandler - valid download key with multiple fields",
-			c: Config{
-				StatsInstance: stats.NewStats(),
-				StorageInstance: func() storage.Storage {
-					s := storage.NewInMemoryStorage()
-					data := map[string]interface{}{
-						"name":   "value",
-						"temp":   "25",
-						"status": "ok",
-					}
-					s.Store("validKey", data)
-					return s
-				}(),
-				DownloadTemplate: getTestDownloadTemplate(),
-			},
+			c: func() Config {
+				s := storage.NewInMemoryStorage()
+				d := map[string]interface{}{
+					"name":   "value",
+					"temp":   "25",
+					"status": "ok",
+				}
+				s.Store("validKey", d)
+				return Config{
+					StatsInstance:    stats.NewStats(),
+					DataService:      &data.Service{StorageInstance: s},
+					DownloadTemplate: getTestDownloadTemplate(),
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
@@ -471,19 +480,19 @@ func Test_DownloadRootHandler(t *testing.T) {
 		},
 		{
 			name: "DownloadRootHandler - HTML escaping for XSS prevention",
-			c: Config{
-				StatsInstance: stats.NewStats(),
-				StorageInstance: func() storage.Storage {
-					s := storage.NewInMemoryStorage()
-					data := map[string]interface{}{
-						"<script>alert('xss')</script>": "value",
-						"normal_field":                  "value",
-					}
-					s.Store("validKey", data)
-					return s
-				}(),
-				DownloadTemplate: getTestDownloadTemplate(),
-			},
+			c: func() Config {
+				s := storage.NewInMemoryStorage()
+				d := map[string]interface{}{
+					"<script>alert('xss')</script>": "value",
+					"normal_field":                  "value",
+				}
+				s.Store("validKey", d)
+				return Config{
+					StatsInstance:    stats.NewStats(),
+					DataService:      &data.Service{StorageInstance: s},
+					DownloadTemplate: getTestDownloadTemplate(),
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
@@ -506,28 +515,28 @@ func Test_DownloadRootHandler(t *testing.T) {
 		},
 		{
 			name: "DownloadRootHandler - nested fields",
-			c: Config{
-				StatsInstance: stats.NewStats(),
-				StorageInstance: func() storage.Storage {
-					s := storage.NewInMemoryStorage()
-					data := map[string]interface{}{
-						"folder_1": map[string]interface{}{
-							"folder_2": map[string]interface{}{
-								"name1":     "value",
-								"timestamp": "2026-01-16T10:51:07Z",
-							},
+			c: func() Config {
+				s := storage.NewInMemoryStorage()
+				d := map[string]interface{}{
+					"folder_1": map[string]interface{}{
+						"folder_2": map[string]interface{}{
+							"name1":     "value",
+							"timestamp": "2026-01-16T10:51:07Z",
 						},
-						"name":            "value",
-						"name1":           "value",
-						"name1_timestamp": "2026-01-16T10:49:40Z",
-						"name_timestamp":  "2026-01-16T10:49:37Z",
-						"timestamp":       "2026-01-16T10:51:07Z",
-					}
-					s.Store("validKey", data)
-					return s
-				}(),
-				DownloadTemplate: getTestDownloadTemplate(),
-			},
+					},
+					"name":            "value",
+					"name1":           "value",
+					"name1_timestamp": "2026-01-16T10:49:40Z",
+					"name_timestamp":  "2026-01-16T10:49:37Z",
+					"timestamp":       "2026-01-16T10:51:07Z",
+				}
+				s.Store("validKey", d)
+				return Config{
+					StatsInstance:    stats.NewStats(),
+					DataService:      &data.Service{StorageInstance: s},
+					DownloadTemplate: getTestDownloadTemplate(),
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
@@ -552,16 +561,15 @@ func Test_DownloadRootHandler(t *testing.T) {
 		},
 		{
 			name: "DownloadRootHandler - error decoding JSON",
-			c: Config{
-				StatsInstance: stats.NewStats(),
-				StorageInstance: func() storage.Storage {
-					s := storage.NewInMemoryStorage()
-					// Store invalid JSON data
-					s.StoreRawForTesting("validKey", []byte(`{"key": "value"`)) // Missing closing brace
-					return s
-				}(),
-				DownloadTemplate: getTestDownloadTemplate(),
-			},
+			c: func() Config {
+				s := storage.NewInMemoryStorage()
+				s.StoreRawForTesting("validKey", []byte(`{"key": "value"`))
+				return Config{
+					StatsInstance:    stats.NewStats(),
+					DataService:      &data.Service{StorageInstance: s},
+					DownloadTemplate: getTestDownloadTemplate(),
+				}
+			}(),
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {

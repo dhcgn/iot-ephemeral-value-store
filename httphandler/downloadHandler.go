@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/dhcgn/iot-ephemeral-value-store/domain"
+	"github.com/dhcgn/iot-ephemeral-value-store/data"
 	"github.com/gorilla/mux"
 )
 
@@ -22,17 +22,13 @@ func (c Config) downloadPlainHandler(w http.ResponseWriter, r *http.Request, bas
 	downloadKey := vars["downloadKey"]
 	param := vars["param"]
 
-	// Strip the optional "d_" prefix from the download key
-	downloadKey = domain.StripDownloadPrefix(downloadKey)
-
-	jsonData, err := c.StorageInstance.GetJSON(downloadKey)
+	jsonData, err := c.DataService.DownloadJSON(downloadKey)
 	if err != nil {
 		c.StatsInstance.IncrementHTTPErrors()
 		http.Error(w, "Invalid download key or database error", http.StatusNotFound)
 		return
 	}
 
-	// Parse the JSON data to retrieve the specific parameter
 	paramMap := make(map[string]interface{})
 	if err := json.Unmarshal(jsonData, &paramMap); err != nil {
 		c.StatsInstance.IncrementHTTPErrors()
@@ -40,24 +36,15 @@ func (c Config) downloadPlainHandler(w http.ResponseWriter, r *http.Request, bas
 		return
 	}
 
-	// Split the param to get the keys for traversal
-	keys := strings.Split(param, "/")
-
-	// Traverse the map using the keys
-	var value interface{} = paramMap
-	for _, key := range keys {
-		if m, ok := value.(map[string]interface{}); ok {
-			value, ok = m[key]
-			if !ok {
-				c.StatsInstance.IncrementHTTPErrors()
-				http.Error(w, "Parameter not found", http.StatusNotFound)
-				return
-			}
+	value, err := data.TraverseField(paramMap, param)
+	if err != nil {
+		c.StatsInstance.IncrementHTTPErrors()
+		if strings.Contains(err.Error(), "not found") {
+			http.Error(w, "Parameter not found", http.StatusNotFound)
 		} else {
-			c.StatsInstance.IncrementHTTPErrors()
 			http.Error(w, "Invalid parameter path", http.StatusBadRequest)
-			return
 		}
+		return
 	}
 
 	// If base64 mode is enabled, decode the value from base64url
@@ -103,10 +90,7 @@ func (c Config) DownloadJsonHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	downloadKey := vars["downloadKey"]
 
-	// Strip the optional "d_" prefix from the download key
-	downloadKey = domain.StripDownloadPrefix(downloadKey)
-
-	jsonData, err := c.StorageInstance.GetJSON(downloadKey)
+	jsonData, err := c.DataService.DownloadJSON(downloadKey)
 	if err != nil {
 		c.StatsInstance.IncrementHTTPErrors()
 		http.Error(w, "Invalid download key or database error", http.StatusNotFound)
@@ -130,10 +114,7 @@ func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	downloadKey := vars["downloadKey"]
 
-	// Strip the optional "d_" prefix from the download key
-	downloadKey = domain.StripDownloadPrefix(downloadKey)
-
-	jsonData, err := c.StorageInstance.GetJSON(downloadKey)
+	jsonData, err := c.DataService.DownloadJSON(downloadKey)
 	if err != nil {
 		c.StatsInstance.IncrementHTTPErrors()
 		http.Error(w, "Invalid download key or database error", http.StatusNotFound)
@@ -158,10 +139,10 @@ func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Collect all paths (including nested ones)
 	paths := collectAllPaths(paramMap, "")
-	
+
 	// Sort paths alphabetically for consistent ordering
 	sort.Strings(paths)
-	
+
 	var fields []FieldData
 	if len(paths) > 0 {
 		fields = make([]FieldData, 0, len(paths))
@@ -197,7 +178,7 @@ func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
 // Returns a slice of path strings in the format "key" or "parent/child" for nested values.
 func collectAllPaths(data interface{}, prefix string) []string {
 	var paths []string
-	
+
 	switch v := data.(type) {
 	case map[string]interface{}:
 		for key, value := range v {
@@ -207,7 +188,7 @@ func collectAllPaths(data interface{}, prefix string) []string {
 			} else {
 				currentPath = prefix + "/" + key
 			}
-			
+
 			// Check if the value is a nested map or a leaf value
 			if nestedMap, ok := value.(map[string]interface{}); ok {
 				// Recursively collect paths from nested maps
@@ -219,6 +200,6 @@ func collectAllPaths(data interface{}, prefix string) []string {
 			}
 		}
 	}
-	
+
 	return paths
 }

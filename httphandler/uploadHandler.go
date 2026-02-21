@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/dhcgn/iot-ephemeral-value-store/domain"
 	"github.com/gorilla/mux"
 )
 
@@ -24,37 +23,28 @@ func (c Config) UploadHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c Config) handleUpload(w http.ResponseWriter, r *http.Request, uploadKey, path string, isPatch bool) {
-	// Validate upload key
-	if err := domain.ValidateUploadKey(uploadKey); err != nil {
+	paramMap := collectParams(r.URL.Query())
+
+	// HTTP-specific: add per-key timestamps
+	addTimestampToThisData(paramMap, path)
+
+	var downloadKey string
+	var err error
+
+	if isPatch {
+		downloadKey, _, err = c.DataService.Patch(uploadKey, path, paramMap)
+	} else {
+		downloadKey, _, err = c.DataService.Upload(uploadKey, paramMap)
+	}
+
+	if err != nil {
+		c.StatsInstance.IncrementHTTPErrors()
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Derive download key
-	downloadKey, err := domain.DeriveDownloadKey(uploadKey)
-	if err != nil {
-		c.StatsInstance.IncrementHTTPErrors()
-		http.Error(w, "Error deriving download key", http.StatusInternalServerError)
-		return
-	}
-
-	// Collect parameters
-	paramMap := collectParams(r.URL.Query())
-
-	// Add timestamp to params
-	addTimestampToThisData(paramMap, path)
-
-	// Handle data storage
-	data, err := c.modifyData(downloadKey, paramMap, path, isPatch)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	c.StorageInstance.Store(downloadKey, data)
-
 	c.StatsInstance.IncrementUploads()
 
-	// Construct and return response
 	constructAndReturnResponse(w, r, downloadKey, paramMap)
 }
 
