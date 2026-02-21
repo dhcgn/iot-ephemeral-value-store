@@ -21,6 +21,6 @@ iot-ephemeral-value-store
 # Go workspace file
 go.work
 
-/data/*
+debug_db_store/
 !/data/*.go
 /build
