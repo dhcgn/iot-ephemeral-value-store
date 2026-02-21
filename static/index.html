@@ -63,6 +63,23 @@
             border-radius: 4px;
         }
 
+        pre {
+            background-color: #2d2d2d;
+            color: #f8f8f2;
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        pre code {
+            background-color: transparent;
+            padding: 0;
+            border-radius: 0;
+            color: inherit;
+        }
+
         .viewer-button {
             position: fixed;
             top: 20px;
@@ -198,6 +215,21 @@
             The download key can be derived from the upload key.
             <code>echo -n "5347d61e218f9a7988292c82ddfe347a276fcb82dd2df8aaad733c8970379f41" | sha256sum</code>
         </p>
+
+        <h2>MCP Server Configuration</h2>
+        <p>This server supports the <a href="https://modelcontextprotocol.io/">Model Context Protocol (MCP)</a>. Add it to your MCP client (e.g. VS Code, Claude Desktop) using the following configuration:</p>
+        <pre><code>{
+  "mcpServers": {
+    "IoT-Ephemeral-Value-Store-Server": {
+      "type": "http",
+      "url": "{{.BaseURL}}/mcp",
+      "headers": {},
+      "tools": [
+        "*"
+      ]
+    }
+  }
+}</code></pre>
 
         <h2>GitHub Repository</h2>
         <p>You can find the source code and contribute to this project on GitHub:</p>
