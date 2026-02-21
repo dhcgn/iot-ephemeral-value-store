@@ -449,6 +449,66 @@
         .copy-success.show {
             opacity: 1;
         }
+
+        .kv-add-row {
+            display: flex;
+            gap: 8px;
+            margin: 10px 0;
+            align-items: center;
+        }
+
+        .kv-input {
+            flex: 1;
+            padding: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 13px;
+            min-width: 0;
+        }
+
+        .kv-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .kv-pairs-list {
+            margin: 10px 0;
+            min-height: 32px;
+        }
+
+        .kv-pair-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 6px;
+            background: #f0f0f8;
+            padding: 6px 10px;
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
+        }
+
+        .kv-pair-key {
+            flex: 1;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #667eea;
+            font-weight: 600;
+            word-break: break-all;
+        }
+
+        .kv-pair-sep {
+            color: #999;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+
+        .kv-pair-value {
+            flex: 1;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #333;
+            word-break: break-all;
+        }
     </style>
 </head>
 
@@ -460,7 +520,15 @@
                 <h2>📤 Upload Data with curl</h2>
                 <span class="close" onclick="closeCurlModal()">&times;</span>
             </div>
-            <p>Use this curl command to upload data to this key. Replace the parameter names and values with your own.</p>
+            <p>Add key-value pairs to build your curl upload command.</p>
+            <div class="kv-pairs-list" id="kvPairsContainer"></div>
+            <div class="kv-add-row">
+                <input type="text" id="newKvKey" class="kv-input" placeholder="Key (e.g. temperature)"
+                    onkeydown="if(event.key==='Enter') addKvPair()">
+                <input type="text" id="newKvValue" class="kv-input" placeholder="Value (e.g. 25)"
+                    onkeydown="if(event.key==='Enter') addKvPair()">
+                <button class="btn btn-success btn-small" onclick="addKvPair()">+ Add</button>
+            </div>
             <div class="curl-command" id="curlCommand"></div>
             <div class="modal-actions">
                 <span class="copy-success" id="copySuccess">✓ Copied to clipboard!</span>
@@ -994,15 +1062,83 @@
             showUploadCurl(keyObj.uploadKey);
         }
 
+        // State for the curl modal
+        let currentUploadKey = null;
+        let currentKvPairs = [];
+
         // Show curl command modal with upload key
         function showUploadCurl(uploadKey) {
-            const serverUrl = window.location.origin;
-            // Note: This API uses GET requests for uploads (by design, to support simple IoT devices)
-            const curlCommand = `curl "${serverUrl}/u/${uploadKey}/?temperature=25&humidity=60"`;
-            
-            document.getElementById('curlCommand').textContent = curlCommand;
+            currentUploadKey = uploadKey;
+            currentKvPairs = [
+                { key: 'temperature', value: '25' },
+                { key: 'humidity', value: '60' }
+            ];
+            document.getElementById('newKvKey').value = '';
+            document.getElementById('newKvValue').value = '';
+            renderKvPairs();
+            updateCurlCommand();
             document.getElementById('curlModal').style.display = 'block';
             document.getElementById('copySuccess').classList.remove('show');
+            document.getElementById('newKvKey').focus();
+        }
+
+        // Add a key-value pair to the list
+        function addKvPair() {
+            const keyInput = document.getElementById('newKvKey');
+            const valueInput = document.getElementById('newKvValue');
+            const key = keyInput.value.trim();
+            const value = valueInput.value.trim();
+
+            if (!key) {
+                keyInput.focus();
+                return;
+            }
+
+            currentKvPairs.push({ key, value });
+            renderKvPairs();
+            updateCurlCommand();
+            keyInput.value = '';
+            valueInput.value = '';
+            keyInput.focus();
+        }
+
+        // Remove a key-value pair by index
+        function removeKvPair(index) {
+            currentKvPairs.splice(index, 1);
+            renderKvPairs();
+            updateCurlCommand();
+        }
+
+        // Render the list of KV pairs in the modal
+        function renderKvPairs() {
+            const container = document.getElementById('kvPairsContainer');
+            if (currentKvPairs.length === 0) {
+                container.innerHTML = '<p style="color:#999;font-size:13px;margin:4px 0;">No parameters yet — add key-value pairs below.</p>';
+                return;
+            }
+            container.innerHTML = currentKvPairs.map((pair, index) => `
+                <div class="kv-pair-row">
+                    <span class="kv-pair-key">${escapeHtml(pair.key)}</span>
+                    <span class="kv-pair-sep">=</span>
+                    <span class="kv-pair-value">${escapeHtml(pair.value)}</span>
+                    <button class="btn btn-danger btn-small" onclick="removeKvPair(${index})">✕</button>
+                </div>
+            `).join('');
+        }
+
+        // Rebuild the curl command from current KV pairs
+        function updateCurlCommand() {
+            const serverUrl = window.location.origin;
+            let url;
+            if (currentKvPairs.length === 0) {
+                url = `${serverUrl}/u/${currentUploadKey}/`;
+            } else {
+                const params = currentKvPairs
+                    .map(p => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`)
+                    .join('&');
+                url = `${serverUrl}/u/${currentUploadKey}/?${params}`;
+            }
+            document.getElementById('curlCommand').textContent = `curl "${url}"`;
         }
 
         // Close curl modal
