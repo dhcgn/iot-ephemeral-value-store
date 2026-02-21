@@ -22,5 +22,4 @@ iot-ephemeral-value-store
 go.work
 
 debug_db_store/
-!/data/*.go
 /build
