@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"sort"
@@ -24,6 +25,7 @@ func (c Config) downloadPlainHandler(w http.ResponseWriter, r *http.Request, bas
 
 	jsonData, err := c.DataService.DownloadJSON(downloadKey)
 	if err != nil {
+		slog.Error("download plain: failed to retrieve data", "error", err, "method", r.Method, "path", r.URL.Path)
 		c.StatsInstance.IncrementHTTPErrors()
 		http.Error(w, "Invalid download key or database error", http.StatusNotFound)
 		return
@@ -31,6 +33,7 @@ func (c Config) downloadPlainHandler(w http.ResponseWriter, r *http.Request, bas
 
 	paramMap := make(map[string]interface{})
 	if err := json.Unmarshal(jsonData, &paramMap); err != nil {
+		slog.Error("download plain: failed to decode JSON", "error", err, "method", r.Method, "path", r.URL.Path)
 		c.StatsInstance.IncrementHTTPErrors()
 		http.Error(w, "Error decoding JSON", http.StatusInternalServerError)
 		return
@@ -38,6 +41,7 @@ func (c Config) downloadPlainHandler(w http.ResponseWriter, r *http.Request, bas
 
 	value, err := data.TraverseField(paramMap, param)
 	if err != nil {
+		slog.Error("download plain: parameter not found", "error", err, "param", param, "method", r.Method, "path", r.URL.Path)
 		c.StatsInstance.IncrementHTTPErrors()
 		if strings.Contains(err.Error(), "not found") {
 			http.Error(w, "Parameter not found", http.StatusNotFound)
@@ -51,6 +55,7 @@ func (c Config) downloadPlainHandler(w http.ResponseWriter, r *http.Request, bas
 	if base64mode {
 		decoded, err := decodeBase64URL(value.(string))
 		if err != nil {
+			slog.Error("download plain: failed to decode base64url", "error", err, "method", r.Method, "path", r.URL.Path)
 			c.StatsInstance.IncrementHTTPErrors()
 			http.Error(w, "Error decoding base64url", http.StatusInternalServerError)
 			return
@@ -92,6 +97,7 @@ func (c Config) DownloadJsonHandler(w http.ResponseWriter, r *http.Request) {
 
 	jsonData, err := c.DataService.DownloadJSON(downloadKey)
 	if err != nil {
+		slog.Error("download JSON: failed to retrieve data", "error", err, "method", r.Method, "path", r.URL.Path)
 		c.StatsInstance.IncrementHTTPErrors()
 		http.Error(w, "Invalid download key or database error", http.StatusNotFound)
 		return
@@ -116,6 +122,7 @@ func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
 
 	jsonData, err := c.DataService.DownloadJSON(downloadKey)
 	if err != nil {
+		slog.Error("download root: failed to retrieve data", "error", err, "method", r.Method, "path", r.URL.Path)
 		c.StatsInstance.IncrementHTTPErrors()
 		http.Error(w, "Invalid download key or database error", http.StatusNotFound)
 		return
@@ -124,6 +131,7 @@ func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
 	// Parse the JSON data to extract field names
 	paramMap := make(map[string]interface{})
 	if err := json.Unmarshal(jsonData, &paramMap); err != nil {
+		slog.Error("download root: failed to decode JSON", "error", err, "method", r.Method, "path", r.URL.Path)
 		c.StatsInstance.IncrementHTTPErrors()
 		http.Error(w, "Error decoding JSON", http.StatusInternalServerError)
 		return
@@ -165,6 +173,7 @@ func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
 	// Render template
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := c.DownloadTemplate.Execute(w, data); err != nil {
+		slog.Error("download root: failed to render template", "error", err, "method", r.Method, "path", r.URL.Path)
 		c.StatsInstance.IncrementHTTPErrors()
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 		return

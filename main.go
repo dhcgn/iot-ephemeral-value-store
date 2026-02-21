@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io/fs"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
@@ -76,6 +77,8 @@ var (
 )
 
 func main() {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, nil)))
+
 	fmt.Println("Starting iot-ephemeral-value-store-server", Version, "Build:", BuildTime, "Commit:", Commit)
 	fmt.Println("https://github.com/dhcgn/iot-ephemeral-value-store")
 	fmt.Println("")

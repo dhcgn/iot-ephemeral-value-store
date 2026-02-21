@@ -1,6 +1,7 @@
 package httphandler
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -12,6 +13,7 @@ func (c Config) DeleteHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, err := c.DataService.Delete(uploadKey)
 	if err != nil {
+		slog.Error("delete: failed to delete data", "error", err, "method", r.Method, "path", r.URL.Path)
 		c.StatsInstance.IncrementHTTPErrors()
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
