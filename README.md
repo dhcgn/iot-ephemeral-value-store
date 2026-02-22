@@ -2,6 +2,9 @@
 [![codecov](https://codecov.io/gh/dhcgn/iot-ephemeral-value-store/graph/badge.svg?token=LLTOitLLDc)](https://codecov.io/gh/dhcgn/iot-ephemeral-value-store)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dhcgn/iot-ephemeral-value-store)](https://goreportcard.com/report/github.com/dhcgn/iot-ephemeral-value-store)
 [![govulncheck](https://github.com/dhcgn/iot-ephemeral-value-store/actions/workflows/govulncheck.yml/badge.svg)](https://github.com/dhcgn/iot-ephemeral-value-store/actions/workflows/govulncheck.yml)
+![Docker Image Version](https://img.shields.io/docker/v/dhcgn/iot-ephemeral-value-store-server?label=Docker%20App%20Version)
+![GitHub go.mod Go version (branch)](https://img.shields.io/github/go-mod/go-version/dhcgn/iot-ephemeral-value-store/main)
+
 
 > MCP Demo Server
 > Url: <https://iot.hdev.io/mcp>  
