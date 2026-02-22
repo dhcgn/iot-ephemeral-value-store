@@ -22,6 +22,11 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags "\
 RUN mkdir /db
 
 FROM gcr.io/distroless/static-debian13
+
+LABEL org.opencontainers.image.source="https://github.com/dhcgn/iot-ephemeral-value-store"
+LABEL org.opencontainers.image.description="IoT Ephemeral Value Store - a simple HTTP interface for storing and retrieving temporary IoT data"
+LABEL org.opencontainers.image.licenses="MIT"
+
 USER nonroot:nonroot
 WORKDIR /app
 COPY --from=builder /app/iot-ephemeral-value-store-server /app/
