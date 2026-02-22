@@ -1,4 +1,4 @@
-name: Docker Hub Publish
+name: ghcr.io and Docker Hub Publish
 
 on:
   push:
