@@ -3,8 +3,16 @@ package mcphandler
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+)
+
+const (
+	// defaultSessionTimeout is the idle timeout for MCP streaming sessions.
+	// Sessions idle longer than this are closed, preventing goroutine leaks
+	// from long-lived streamableServerConn read loops.
+	defaultSessionTimeout = 10 * time.Minute
 )
 
 // MCPServer wraps the MCP server for HTTP handling
@@ -33,10 +41,13 @@ func NewMCPServer(config Config) (*MCPServer, error) {
 	// Register all tools
 	config.RegisterTools(server)
 
-	// Create the streamable HTTP handler
+	// Create the streamable HTTP handler with a session idle timeout to
+	// prevent goroutine leaks from long-lived connections.
 	handler := mcp.NewStreamableHTTPHandler(func(req *http.Request) *mcp.Server {
 		return server
-	}, nil)
+	}, &mcp.StreamableHTTPOptions{
+		SessionTimeout: defaultSessionTimeout,
+	})
 
 	return &MCPServer{
 		config:  config,
