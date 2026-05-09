@@ -2,6 +2,7 @@
 package storage
 
 import (
+	"fmt"
 	"os"
 	"reflect"
 	"testing"
@@ -10,7 +11,7 @@ import (
 
 func TestInMemoryStorage(t *testing.T) {
 	storage := NewInMemoryStorage()
-	defer storage.Db.Close()
+	defer storage.Close()
 
 	// Test Store and Retrieve
 	t.Run("Store and Retrieve", func(t *testing.T) {
@@ -88,7 +89,7 @@ func TestInMemoryStorage(t *testing.T) {
 
 func TestStoreRawForTesting(t *testing.T) {
 	storage := NewInMemoryStorage()
-	defer storage.Db.Close()
+	defer storage.Close()
 
 	t.Run("StoreRawForTesting", func(t *testing.T) {
 		key := "raw_test_key"
@@ -113,7 +114,7 @@ func TestStoreRawForTesting(t *testing.T) {
 func TestGetJSON(t *testing.T) {
 	t.Run("GetJSON Success", func(t *testing.T) {
 		storage := NewInMemoryStorage()
-		defer storage.Db.Close()
+		defer storage.Close()
 
 		key := "json_test_key"
 		data := map[string]interface{}{
@@ -138,7 +139,7 @@ func TestGetJSON(t *testing.T) {
 
 	t.Run("GetJSON Key Not Found", func(t *testing.T) {
 		storage := NewInMemoryStorage()
-		defer storage.Db.Close()
+		defer storage.Close()
 
 		key := "non_existent_key"
 
@@ -155,7 +156,7 @@ func TestGetJSON(t *testing.T) {
 
 func TestStoreJSONEncodingError(t *testing.T) {
 	storage := NewInMemoryStorage()
-	defer storage.Db.Close()
+	defer storage.Close()
 
 	t.Run("Store JSON Encoding Error", func(t *testing.T) {
 		key := "json_encoding_error_key"
@@ -183,7 +184,7 @@ func TestNewPersistentStorage(t *testing.T) {
 
 	duration := 5 * time.Minute
 	storage := NewPersistentStorage(dir, duration)
-	defer storage.Db.Close()
+	defer storage.Close()
 
 	if storage.Db == nil {
 		t.Fatal("Expected non-nil database")
@@ -219,9 +220,53 @@ func TestNewPersistentStorage_createsDirectory(t *testing.T) {
 	// Use a subdirectory that does not yet exist
 	storePath := parent + "/subdir/data"
 	storage := NewPersistentStorage(storePath, time.Minute)
-	defer storage.Db.Close()
+	defer storage.Close()
 
 	if _, err := os.Stat(storePath); os.IsNotExist(err) {
 		t.Errorf("Expected directory %q to be created", storePath)
+	}
+}
+
+func TestClose_inMemory(t *testing.T) {
+	s := NewInMemoryStorage()
+	// Close should succeed without error even without a GC goroutine.
+	if err := s.Close(); err != nil {
+		t.Fatalf("Close returned error: %v", err)
+	}
+}
+
+func TestClose_persistent(t *testing.T) {
+	dir, err := os.MkdirTemp("", "close-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	t.Cleanup(func() { os.RemoveAll(dir) })
+
+	s := NewPersistentStorage(dir, time.Minute)
+	// Close should stop GC and close the DB without error.
+	if err := s.Close(); err != nil {
+		t.Fatalf("Close returned error: %v", err)
+	}
+}
+
+func TestValueLogGC_stopsOnClose(t *testing.T) {
+	dir, err := os.MkdirTemp("", "gc-stop-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	t.Cleanup(func() { os.RemoveAll(dir) })
+
+	s := NewPersistentStorage(dir, time.Minute)
+
+	// Store and delete some data so the GC has something to consider.
+	for i := range 10 {
+		key := fmt.Sprintf("gc_key_%d", i)
+		_ = s.Store(key, map[string]interface{}{"v": i})
+		_ = s.Delete(key)
+	}
+
+	// Closing should not hang or panic.
+	if err := s.Close(); err != nil {
+		t.Fatalf("Close returned error: %v", err)
 	}
 }

@@ -29,9 +29,17 @@ func (badgerSlogLogger) Debugf(format string, args ...interface{}) {
 	slog.Debug(fmt.Sprintf("badger: "+format, args...))
 }
 
+// valueLogGCDiscardRatio is the ratio passed to RunValueLogGC.
+// A value of 0.5 means Badger will rewrite a value log file if it can
+// discard at least 50% of its space.
+const valueLogGCDiscardRatio = 0.5
+
+// StorageInstance wraps a BadgerDB instance with periodic value log garbage
+// collection. Call Close to release resources and stop the GC goroutine.
 type StorageInstance struct {
 	Db              *badger.DB
 	PersistDuration time.Duration
+	stopGC          chan struct{}
 }
 
 type Storage interface {
@@ -41,6 +49,37 @@ type Storage interface {
 	Retrieve(downloadKey string) (map[string]interface{}, error)
 }
 
+// Close stops the periodic value log GC goroutine (if running) and closes the
+// underlying BadgerDB.
+func (c StorageInstance) Close() error {
+	if c.stopGC != nil {
+		close(c.stopGC)
+	}
+	return c.Db.Close()
+}
+
+// startValueLogGC starts a background goroutine that periodically runs
+// Badger's value log garbage collection. The goroutine stops when stopCh
+// is closed.
+func startValueLogGC(db *badger.DB, interval time.Duration, stopCh chan struct{}) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stopCh:
+				return
+			case <-ticker.C:
+				for {
+					if err := db.RunValueLogGC(valueLogGCDiscardRatio); err != nil {
+						break
+					}
+				}
+			}
+		}
+	}()
+}
+
 func NewInMemoryStorage() StorageInstance {
 	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true).WithLogger(badgerSlogLogger{}))
 	if err != nil {
@@ -48,8 +87,7 @@ func NewInMemoryStorage() StorageInstance {
 	}
 
 	return StorageInstance{
-		Db: db,
-		// 1min
+		Db:              db,
 		PersistDuration: time.Duration(1 * time.Minute),
 	}
 }
@@ -72,9 +110,13 @@ func NewPersistentStorage(storePath string, persistDuration time.Duration) Stora
 		log.Fatal(err)
 	}
 
+	stopCh := make(chan struct{})
+	startValueLogGC(db, 5*time.Minute, stopCh)
+
 	return StorageInstance{
 		Db:              db,
 		PersistDuration: persistDuration,
+		stopGC:          stopCh,
 	}
 }
 
