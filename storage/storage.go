@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +13,12 @@ import (
 
 	"github.com/dgraph-io/badger/v3"
 )
+
+// DefaultOperationTimeout is the maximum time a single BadgerDB transaction
+// (View or Update) is allowed to run before the caller's context deadline
+// takes precedence. If the caller already carries a shorter deadline (e.g.
+// from the HTTP server's WriteTimeout) that deadline wins automatically.
+const DefaultOperationTimeout = 10 * time.Second
 
 // badgerSlogLogger bridges badger's Logger interface to slog.
 type badgerSlogLogger struct{}
@@ -42,11 +49,15 @@ type StorageInstance struct {
 	stopGC          chan struct{}
 }
 
+// Storage defines the operations for persisting and retrieving ephemeral
+// IoT data. All methods accept a context.Context so that callers (e.g. HTTP
+// handlers) can propagate deadlines and cancellation to the underlying
+// database operations.
 type Storage interface {
-	GetJSON(downloadKey string) ([]byte, error)
-	Delete(downloadKey string) error
-	Store(downloadKey string, dataToStore map[string]interface{}) error
-	Retrieve(downloadKey string) (map[string]interface{}, error)
+	GetJSON(ctx context.Context, downloadKey string) ([]byte, error)
+	Delete(ctx context.Context, downloadKey string) error
+	Store(ctx context.Context, downloadKey string, dataToStore map[string]interface{}) error
+	Retrieve(ctx context.Context, downloadKey string) (map[string]interface{}, error)
 }
 
 // Close stops the periodic value log GC goroutine (if running) and closes the
@@ -120,9 +131,77 @@ func NewPersistentStorage(storePath string, persistDuration time.Duration) Stora
 	}
 }
 
-func (c StorageInstance) GetJSON(downloadKey string) ([]byte, error) {
+// viewWithContext runs a read-only BadgerDB transaction, honouring the
+// caller's context deadline/cancellation. If ctx has no deadline, a
+// fallback timeout of DefaultOperationTimeout is applied.
+//
+// When the context expires before the transaction completes, the function
+// returns immediately with the context error. The background goroutine
+// running the actual transaction will finish on its own — BadgerDB
+// transactions are not cancellable, so we must let them complete to avoid
+// corrupted state.
+func (c StorageInstance) viewWithContext(ctx context.Context, fn func(txn *badger.Txn) error) error {
+	ctx, cancel := contextWithFallbackTimeout(ctx)
+	defer cancel()
+
+	// Fast path: if context is already done, don't start a transaction.
+	if ctx.Err() != nil {
+		return fmt.Errorf("database read operation cancelled: %w", ctx.Err())
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Db.View(fn)
+	}()
+
+	select {
+	case err := <-done:
+		return err
+	case <-ctx.Done():
+		// The goroutine will still finish in the background. This is
+		// intentional: BadgerDB transactions cannot be interrupted, and
+		// the goroutine only reads from the DB.
+		return fmt.Errorf("database read operation cancelled: %w", ctx.Err())
+	}
+}
+
+// updateWithContext runs a read-write BadgerDB transaction, honouring the
+// caller's context deadline/cancellation. If ctx has no deadline, a
+// fallback timeout of DefaultOperationTimeout is applied.
+func (c StorageInstance) updateWithContext(ctx context.Context, fn func(txn *badger.Txn) error) error {
+	ctx, cancel := contextWithFallbackTimeout(ctx)
+	defer cancel()
+
+	if ctx.Err() != nil {
+		return fmt.Errorf("database write operation cancelled: %w", ctx.Err())
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Db.Update(fn)
+	}()
+
+	select {
+	case err := <-done:
+		return err
+	case <-ctx.Done():
+		return fmt.Errorf("database write operation cancelled: %w", ctx.Err())
+	}
+}
+
+// contextWithFallbackTimeout returns ctx with a DefaultOperationTimeout if
+// ctx does not already carry a deadline. The caller must call the returned
+// cancel function.
+func contextWithFallbackTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
+	if _, ok := ctx.Deadline(); ok {
+		return context.WithCancel(ctx)
+	}
+	return context.WithTimeout(ctx, DefaultOperationTimeout)
+}
+
+func (c StorageInstance) GetJSON(ctx context.Context, downloadKey string) ([]byte, error) {
 	var jsonData []byte
-	err := c.Db.View(func(txn *badger.Txn) error {
+	err := c.viewWithContext(ctx, func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(downloadKey))
 		if err != nil {
 			return err
@@ -133,25 +212,24 @@ func (c StorageInstance) GetJSON(downloadKey string) ([]byte, error) {
 	return jsonData, err
 }
 
-func (c StorageInstance) Store(downloadKey string, dataToStore map[string]interface{}) error {
+func (c StorageInstance) Store(ctx context.Context, downloadKey string, dataToStore map[string]interface{}) error {
 	updatedJSONData, err := json.Marshal(dataToStore)
 	if err != nil {
 		return errors.New("error encoding data to JSON")
 	}
 
-	return c.Db.Update(func(txn *badger.Txn) error {
+	return c.updateWithContext(ctx, func(txn *badger.Txn) error {
 		e := badger.NewEntry([]byte(downloadKey), updatedJSONData).WithTTL(c.PersistDuration)
 		return txn.SetEntry(e)
 	})
 }
 
-func (c StorageInstance) Retrieve(downloadKey string) (map[string]interface{}, error) {
+func (c StorageInstance) Retrieve(ctx context.Context, downloadKey string) (map[string]interface{}, error) {
 	var existingData map[string]interface{}
-	err := c.Db.View(func(txn *badger.Txn) error {
+	err := c.viewWithContext(ctx, func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(downloadKey))
 		if err != nil {
 			if err == badger.ErrKeyNotFound {
-				// TODO Why?
 				existingData = make(map[string]interface{})
 				return nil
 			}
@@ -166,8 +244,8 @@ func (c StorageInstance) Retrieve(downloadKey string) (map[string]interface{}, e
 	return existingData, err
 }
 
-func (c StorageInstance) Delete(downloadKey string) error {
-	return c.Db.Update(func(txn *badger.Txn) error {
+func (c StorageInstance) Delete(ctx context.Context, downloadKey string) error {
+	return c.updateWithContext(ctx, func(txn *badger.Txn) error {
 		return txn.Delete([]byte(downloadKey))
 	})
 }

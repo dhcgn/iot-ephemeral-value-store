@@ -101,7 +101,7 @@ func TestUploadDataHandler(t *testing.T) {
 	}
 
 	// Verify data was stored
-	storedData, err := si.GetJSON(downloadKey)
+	storedData, err := si.GetJSON(ctx, downloadKey)
 	if err != nil {
 		t.Fatalf("Expected data to be stored, got error: %v", err)
 	}
@@ -163,7 +163,7 @@ func TestPatchDataHandler(t *testing.T) {
 	}
 
 	// Verify data was merged
-	storedData, err := si.GetJSON(downloadKey)
+	storedData, err := si.GetJSON(ctx, downloadKey)
 	if err != nil {
 		t.Fatalf("Expected data to be stored, got error: %v", err)
 	}
@@ -193,6 +193,7 @@ func TestPatchDataHandler(t *testing.T) {
 
 func TestDownloadDataHandler(t *testing.T) {
 	config, si := newTestConfig()
+	ctx := context.Background()
 
 	uploadKey := domain.GenerateRandomKey()
 	downloadKey, _ := domain.DeriveDownloadKey(uploadKey)
@@ -205,9 +206,8 @@ func TestDownloadDataHandler(t *testing.T) {
 			"temp": "22",
 		},
 	}
-	si.Store(downloadKey, testData)
+	si.Store(ctx, downloadKey, testData)
 
-	ctx := context.Background()
 	req := &mcp.CallToolRequest{}
 
 	t.Run("Download all data", func(t *testing.T) {
@@ -290,6 +290,7 @@ func TestDownloadDataHandler(t *testing.T) {
 
 func TestDeleteDataHandler(t *testing.T) {
 	config, si := newTestConfig()
+	ctx := context.Background()
 
 	uploadKey := domain.GenerateRandomKey()
 	downloadKey, _ := domain.DeriveDownloadKey(uploadKey)
@@ -298,9 +299,8 @@ func TestDeleteDataHandler(t *testing.T) {
 	testData := map[string]interface{}{
 		"temp": "23.5",
 	}
-	si.Store(downloadKey, testData)
+	si.Store(ctx, downloadKey, testData)
 
-	ctx := context.Background()
 	req := &mcp.CallToolRequest{}
 	input := &DeleteDataInput{
 		UploadKey: uploadKey,
@@ -319,7 +319,7 @@ func TestDeleteDataHandler(t *testing.T) {
 	}
 
 	// Verify data was deleted
-	_, err = si.GetJSON(downloadKey)
+	_, err = si.GetJSON(ctx, downloadKey)
 	if err == nil {
 		t.Error("Expected data to be deleted")
 	}

@@ -121,7 +121,7 @@ func (c Config) UploadDataHandler(ctx context.Context, req *mcp.CallToolRequest,
 		return nil, nil, ctx.Err()
 	}
 
-	_, _, err := c.DataService.Upload(params.UploadKey, params.Parameters)
+	_, _, err := c.DataService.Upload(ctx, params.UploadKey, params.Parameters)
 	if err != nil {
 		slog.Error("mcp upload_data: failed", "error", err)
 		c.StatsInstance.IncrementHTTPErrors()
@@ -153,7 +153,7 @@ func (c Config) PatchDataHandler(ctx context.Context, req *mcp.CallToolRequest, 
 		return nil, nil, ctx.Err()
 	}
 
-	_, _, err := c.DataService.Patch(params.UploadKey, params.Path, params.Parameters)
+	_, _, err := c.DataService.Patch(ctx, params.UploadKey, params.Path, params.Parameters)
 	if err != nil {
 		slog.Error("mcp patch_data: failed", "error", err, "path", params.Path)
 		c.StatsInstance.IncrementHTTPErrors()
@@ -190,7 +190,7 @@ func (c Config) DownloadDataHandler(ctx context.Context, req *mcp.CallToolReques
 
 	if params.Parameter == "" {
 		// Return all data as JSON
-		jsonData, err := c.DataService.DownloadJSON(params.DownloadKey)
+		jsonData, err := c.DataService.DownloadJSON(ctx, params.DownloadKey)
 		if err != nil {
 			slog.Error("mcp download_data: failed to retrieve data", "error", err)
 			c.StatsInstance.IncrementHTTPErrors()
@@ -212,7 +212,7 @@ func (c Config) DownloadDataHandler(ctx context.Context, req *mcp.CallToolReques
 		}
 	} else {
 		// Retrieve specific parameter
-		value, err := c.DataService.DownloadField(params.DownloadKey, params.Parameter)
+		value, err := c.DataService.DownloadField(ctx, params.DownloadKey, params.Parameter)
 		if err != nil {
 			slog.Error("mcp download_data: failed to retrieve field", "error", err, "parameter", params.Parameter)
 			c.StatsInstance.IncrementHTTPErrors()
@@ -247,7 +247,7 @@ func (c Config) DeleteDataHandler(ctx context.Context, req *mcp.CallToolRequest,
 		return nil, nil, ctx.Err()
 	}
 
-	_, err := c.DataService.Delete(params.UploadKey)
+	_, err := c.DataService.Delete(ctx, params.UploadKey)
 	if err != nil {
 		slog.Error("mcp delete_data: failed", "error", err)
 		c.StatsInstance.IncrementHTTPErrors()

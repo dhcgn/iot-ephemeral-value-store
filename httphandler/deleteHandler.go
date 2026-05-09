@@ -11,7 +11,7 @@ func (c Config) DeleteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	uploadKey := vars["uploadKey"]
 
-	_, err := c.DataService.Delete(uploadKey)
+	_, err := c.DataService.Delete(r.Context(), uploadKey)
 	if err != nil {
 		slog.Error("delete: failed to delete data", "error", err, "method", r.Method, "path", r.URL.Path)
 		c.StatsInstance.IncrementHTTPErrors()
