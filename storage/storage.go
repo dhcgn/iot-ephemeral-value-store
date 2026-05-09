@@ -230,6 +230,9 @@ func (c StorageInstance) Retrieve(ctx context.Context, downloadKey string) (map[
 		item, err := txn.Get([]byte(downloadKey))
 		if err != nil {
 			if err == badger.ErrKeyNotFound {
+				// Return an empty map for missing keys so callers can
+				// treat a non-existent key as an empty data set (e.g.
+				// the first patch to a new key path).
 				existingData = make(map[string]interface{})
 				return nil
 			}
