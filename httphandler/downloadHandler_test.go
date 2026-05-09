@@ -1,6 +1,7 @@
 package httphandler
 
 import (
+	"context"
 	"encoding/base64"
 	"html/template"
 	"net/http"
@@ -53,6 +54,7 @@ func Test_PlainDownloadHandler(t *testing.T) {
 		r          *http.Request
 		base64mode bool
 	}
+	ctx := context.Background()
 	tests := []struct {
 		name                   string
 		c                      Config
@@ -92,7 +94,7 @@ func Test_PlainDownloadHandler(t *testing.T) {
 			c: func() Config {
 				s := storage.NewInMemoryStorage()
 				d := map[string]interface{}{"key": "value"}
-				s.Store("validKey", d)
+				s.Store(ctx, "validKey", d)
 				return Config{
 					StatsInstance: stats.NewStats(),
 					DataService:   &data.Service{StorageInstance: s},
@@ -119,7 +121,7 @@ func Test_PlainDownloadHandler(t *testing.T) {
 			c: func() Config {
 				s := storage.NewInMemoryStorage()
 				d := map[string]interface{}{"key": "value"}
-				s.Store("validKey", d)
+				s.Store(ctx, "validKey", d)
 				return Config{
 					StatsInstance: stats.NewStats(),
 					DataService:   &data.Service{StorageInstance: s},
@@ -172,7 +174,7 @@ func Test_PlainDownloadHandler(t *testing.T) {
 			c: func() Config {
 				s := storage.NewInMemoryStorage()
 				d := map[string]interface{}{"key": "value"}
-				s.Store("validKey", d)
+				s.Store(ctx, "validKey", d)
 				return Config{
 					StatsInstance: stats.NewStats(),
 					DataService:   &data.Service{StorageInstance: s},
@@ -199,7 +201,7 @@ func Test_PlainDownloadHandler(t *testing.T) {
 			c: func() Config {
 				s := storage.NewInMemoryStorage()
 				d := map[string]interface{}{"key": "invalid_base64"}
-				s.Store("validKey", d)
+				s.Store(ctx, "validKey", d)
 				return Config{
 					StatsInstance: stats.NewStats(),
 					DataService:   &data.Service{StorageInstance: s},
@@ -228,7 +230,7 @@ func Test_PlainDownloadHandler(t *testing.T) {
 				s := storage.NewInMemoryStorage()
 				base64string := base64.URLEncoding.EncodeToString([]byte("Hallo Welt!"))
 				d := map[string]interface{}{"key": base64string}
-				s.Store("validKey", d)
+				s.Store(ctx, "validKey", d)
 				return Config{
 					StatsInstance: stats.NewStats(),
 					DataService:   &data.Service{StorageInstance: s},
@@ -286,6 +288,7 @@ func Test_DownloadHandler(t *testing.T) {
 		w http.ResponseWriter
 		r *http.Request
 	}
+	ctx := context.Background()
 	tests := []struct {
 		name                   string
 		c                      Config
@@ -324,7 +327,7 @@ func Test_DownloadHandler(t *testing.T) {
 			c: func() Config {
 				s := storage.NewInMemoryStorage()
 				d := map[string]interface{}{"key": "value"}
-				s.Store("validKey", d)
+				s.Store(ctx, "validKey", d)
 				return Config{
 					StatsInstance: stats.NewStats(),
 					DataService:   &data.Service{StorageInstance: s},
@@ -376,6 +379,7 @@ func Test_DownloadRootHandler(t *testing.T) {
 		w http.ResponseWriter
 		r *http.Request
 	}
+	ctx := context.Background()
 	tests := []struct {
 		name                   string
 		c                      Config
@@ -415,7 +419,7 @@ func Test_DownloadRootHandler(t *testing.T) {
 			c: func() Config {
 				s := storage.NewInMemoryStorage()
 				d := map[string]interface{}{"name": "value"}
-				s.Store("validKey", d)
+				s.Store(ctx, "validKey", d)
 				return Config{
 					StatsInstance:    stats.NewStats(),
 					DataService:      &data.Service{StorageInstance: s},
@@ -450,7 +454,7 @@ func Test_DownloadRootHandler(t *testing.T) {
 					"temp":   "25",
 					"status": "ok",
 				}
-				s.Store("validKey", d)
+				s.Store(ctx, "validKey", d)
 				return Config{
 					StatsInstance:    stats.NewStats(),
 					DataService:      &data.Service{StorageInstance: s},
@@ -486,7 +490,7 @@ func Test_DownloadRootHandler(t *testing.T) {
 					"<script>alert('xss')</script>": "value",
 					"normal_field":                  "value",
 				}
-				s.Store("validKey", d)
+				s.Store(ctx, "validKey", d)
 				return Config{
 					StatsInstance:    stats.NewStats(),
 					DataService:      &data.Service{StorageInstance: s},
@@ -530,7 +534,7 @@ func Test_DownloadRootHandler(t *testing.T) {
 					"name_timestamp":  "2026-01-16T10:49:37Z",
 					"timestamp":       "2026-01-16T10:51:07Z",
 				}
-				s.Store("validKey", d)
+				s.Store(ctx, "validKey", d)
 				return Config{
 					StatsInstance:    stats.NewStats(),
 					DataService:      &data.Service{StorageInstance: s},

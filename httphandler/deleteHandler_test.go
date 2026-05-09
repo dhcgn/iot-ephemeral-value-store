@@ -1,6 +1,7 @@
 package httphandler
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,6 +17,7 @@ func Test_DeleteHandler(t *testing.T) {
 		w http.ResponseWriter
 		r *http.Request
 	}
+	ctx := context.Background()
 	tests := []struct {
 		name                   string
 		c                      Config
@@ -74,7 +76,7 @@ func Test_DeleteHandler(t *testing.T) {
 			name: "DeleteHandler - known upload key",
 			c: func() Config {
 				si := storage.NewInMemoryStorage()
-				_ = si.Store("7790e6a7c72e97c2493334f7b22ffbaa2a41fc53a95268a4fbb45a9c34d9c5d1", map[string]interface{}{"key": "value"})
+				_ = si.Store(ctx, "7790e6a7c72e97c2493334f7b22ffbaa2a41fc53a95268a4fbb45a9c34d9c5d1", map[string]interface{}{"key": "value"})
 				return Config{
 					StatsInstance: stats.NewStats(),
 					DataService:   &data.Service{StorageInstance: si},

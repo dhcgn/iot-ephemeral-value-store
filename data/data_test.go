@@ -1,6 +1,7 @@
 package data
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
@@ -35,11 +36,12 @@ func TestGenerateKeyPair(t *testing.T) {
 
 func TestUpload(t *testing.T) {
 	svc, si := newTestService()
+	ctx := context.Background()
 
 	uploadKey := domain.GenerateRandomKey()
 	params := map[string]string{"temp": "23.5", "humidity": "45"}
 
-	downloadKey, data, err := svc.Upload(uploadKey, params)
+	downloadKey, data, err := svc.Upload(ctx, uploadKey, params)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -55,7 +57,7 @@ func TestUpload(t *testing.T) {
 	}
 
 	// Verify stored in storage
-	stored, err := si.GetJSON(downloadKey)
+	stored, err := si.GetJSON(ctx, downloadKey)
 	if err != nil {
 		t.Fatalf("Expected data in storage, got error: %v", err)
 	}
@@ -68,8 +70,9 @@ func TestUpload(t *testing.T) {
 
 func TestUpload_InvalidKey(t *testing.T) {
 	svc, _ := newTestService()
+	ctx := context.Background()
 
-	_, _, err := svc.Upload("invalid", map[string]string{"temp": "1"})
+	_, _, err := svc.Upload(ctx, "invalid", map[string]string{"temp": "1"})
 	if err == nil {
 		t.Error("Expected error for invalid upload key")
 	}
@@ -77,23 +80,24 @@ func TestUpload_InvalidKey(t *testing.T) {
 
 func TestPatch(t *testing.T) {
 	svc, si := newTestService()
+	ctx := context.Background()
 
 	uploadKey := domain.GenerateRandomKey()
 
 	// First patch at room1
-	downloadKey, _, err := svc.Patch(uploadKey, "room1", map[string]string{"temp": "20"})
+	downloadKey, _, err := svc.Patch(ctx, uploadKey, "room1", map[string]string{"temp": "20"})
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
 	// Second patch at room2
-	_, _, err = svc.Patch(uploadKey, "room2", map[string]string{"temp": "22"})
+	_, _, err = svc.Patch(ctx, uploadKey, "room2", map[string]string{"temp": "22"})
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
 	// Verify merged
-	stored, _ := si.GetJSON(downloadKey)
+	stored, _ := si.GetJSON(ctx, downloadKey)
 	var storedMap map[string]interface{}
 	json.Unmarshal(stored, &storedMap)
 
@@ -116,8 +120,9 @@ func TestPatch(t *testing.T) {
 
 func TestPatch_InvalidKey(t *testing.T) {
 	svc, _ := newTestService()
+	ctx := context.Background()
 
-	_, _, err := svc.Patch("invalid", "", map[string]string{"temp": "1"})
+	_, _, err := svc.Patch(ctx, "invalid", "", map[string]string{"temp": "1"})
 	if err == nil {
 		t.Error("Expected error for invalid upload key")
 	}
@@ -125,12 +130,13 @@ func TestPatch_InvalidKey(t *testing.T) {
 
 func TestDownloadJSON(t *testing.T) {
 	svc, si := newTestService()
+	ctx := context.Background()
 
 	uploadKey := domain.GenerateRandomKey()
 	downloadKey, _ := domain.DeriveDownloadKey(uploadKey)
-	si.Store(downloadKey, map[string]interface{}{"temp": "23"})
+	si.Store(ctx, downloadKey, map[string]interface{}{"temp": "23"})
 
-	jsonData, err := svc.DownloadJSON(downloadKey)
+	jsonData, err := svc.DownloadJSON(ctx, downloadKey)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -144,8 +150,9 @@ func TestDownloadJSON(t *testing.T) {
 
 func TestDownloadJSON_NotFound(t *testing.T) {
 	svc, _ := newTestService()
+	ctx := context.Background()
 
-	_, err := svc.DownloadJSON("nonexistent")
+	_, err := svc.DownloadJSON(ctx, "nonexistent")
 	if err == nil {
 		t.Error("Expected error for non-existent key")
 	}
@@ -153,9 +160,10 @@ func TestDownloadJSON_NotFound(t *testing.T) {
 
 func TestDownloadField(t *testing.T) {
 	svc, si := newTestService()
+	ctx := context.Background()
 
 	downloadKey := "testkey"
-	si.Store(downloadKey, map[string]interface{}{
+	si.Store(ctx, downloadKey, map[string]interface{}{
 		"temp": "23",
 		"room": map[string]interface{}{
 			"humidity": "45",
@@ -163,7 +171,7 @@ func TestDownloadField(t *testing.T) {
 	})
 
 	t.Run("Root field", func(t *testing.T) {
-		val, err := svc.DownloadField(downloadKey, "temp")
+		val, err := svc.DownloadField(ctx, downloadKey, "temp")
 		if err != nil {
 			t.Fatalf("Expected no error, got %v", err)
 		}
@@ -173,7 +181,7 @@ func TestDownloadField(t *testing.T) {
 	})
 
 	t.Run("Nested field", func(t *testing.T) {
-		val, err := svc.DownloadField(downloadKey, "room/humidity")
+		val, err := svc.DownloadField(ctx, downloadKey, "room/humidity")
 		if err != nil {
 			t.Fatalf("Expected no error, got %v", err)
 		}
@@ -183,7 +191,7 @@ func TestDownloadField(t *testing.T) {
 	})
 
 	t.Run("Non-existent field", func(t *testing.T) {
-		_, err := svc.DownloadField(downloadKey, "nonexistent")
+		_, err := svc.DownloadField(ctx, downloadKey, "nonexistent")
 		if err == nil {
 			t.Error("Expected error for non-existent field")
 		}
@@ -192,12 +200,13 @@ func TestDownloadField(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	svc, si := newTestService()
+	ctx := context.Background()
 
 	uploadKey := domain.GenerateRandomKey()
 	downloadKey, _ := domain.DeriveDownloadKey(uploadKey)
-	si.Store(downloadKey, map[string]interface{}{"temp": "23"})
+	si.Store(ctx, downloadKey, map[string]interface{}{"temp": "23"})
 
-	retDownloadKey, err := svc.Delete(uploadKey)
+	retDownloadKey, err := svc.Delete(ctx, uploadKey)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -206,7 +215,7 @@ func TestDelete(t *testing.T) {
 	}
 
 	// Verify deleted
-	_, err = si.GetJSON(downloadKey)
+	_, err = si.GetJSON(ctx, downloadKey)
 	if err == nil {
 		t.Error("Expected data to be deleted")
 	}
@@ -214,8 +223,9 @@ func TestDelete(t *testing.T) {
 
 func TestDelete_InvalidKey(t *testing.T) {
 	svc, _ := newTestService()
+	ctx := context.Background()
 
-	_, err := svc.Delete("invalid")
+	_, err := svc.Delete(ctx, "invalid")
 	if err == nil {
 		t.Error("Expected error for invalid upload key")
 	}
