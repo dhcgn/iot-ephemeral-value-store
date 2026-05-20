@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"html/template"
@@ -106,7 +107,7 @@ func main() {
 	storage := createStorage(storePath, persistDuration)
 	defer storage.Db.Close()
 
-	dataService := &data.Service{StorageInstance: storage}
+	dataService := &data.Service{StorageInstance: &storage}
 
 	httphandlerConfig := httphandler.Config{
 		DataService:   dataService,
@@ -120,7 +121,7 @@ func main() {
 		StatsInstance:      restStats,
 	}
 
-	r := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats)
+	r := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats, &storage)
 
 	serverAddress := fmt.Sprintf(":%d", port)
 	srv := &http.Server{
@@ -134,7 +135,7 @@ func main() {
 	listenAndServe(srv)
 }
 
-func createRouter(hhc httphandler.Config, mc middleware.Config, restStats *stats.Stats, mcpStats *stats.Stats) *mux.Router {
+func createRouter(hhc httphandler.Config, mc middleware.Config, restStats *stats.Stats, mcpStats *stats.Stats, storageInst *storage.StorageInstance) *mux.Router {
 	// Template parsing
 	tmpl, err := template.ParseFS(staticFiles, "static/index.html")
 	if err != nil {
@@ -183,7 +184,11 @@ func createRouter(hhc httphandler.Config, mc middleware.Config, restStats *stats
 
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"status":"ok"}`)
+		health := storageInst.CheckHealth()
+		if !health.Healthy {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}
+		json.NewEncoder(w).Encode(health)
 	}).Methods("GET")
 
 	r.HandleFunc("/kp", hhc.KeyPairHandler).Methods("GET")

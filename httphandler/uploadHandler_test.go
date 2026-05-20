@@ -32,7 +32,7 @@ func Test_UploadHandler(t *testing.T) {
 				si := storage.NewInMemoryStorage()
 				return Config{
 					StatsInstance: stats.NewStats(),
-					DataService:   &data.Service{StorageInstance: si},
+					DataService:   &data.Service{StorageInstance: &si},
 				}
 			}(),
 			args: args{
@@ -56,7 +56,7 @@ func Test_UploadHandler(t *testing.T) {
 				si := storage.NewInMemoryStorage()
 				return Config{
 					StatsInstance: stats.NewStats(),
-					DataService:   &data.Service{StorageInstance: si},
+					DataService:   &data.Service{StorageInstance: &si},
 				}
 			}(),
 			args: args{
@@ -80,7 +80,7 @@ func Test_UploadHandler(t *testing.T) {
 				si := storage.NewInMemoryStorage()
 				return Config{
 					StatsInstance: stats.NewStats(),
-					DataService:   &data.Service{StorageInstance: si},
+					DataService:   &data.Service{StorageInstance: &si},
 				}
 			}(),
 			args: args{
@@ -147,7 +147,7 @@ func Test_UploadAndPatchHandler(t *testing.T) {
 				si := storage.NewInMemoryStorage()
 				return Config{
 					StatsInstance: stats.NewStats(),
-					DataService:   &data.Service{StorageInstance: si},
+					DataService:   &data.Service{StorageInstance: &si},
 				}
 			}(),
 			args: args{
@@ -172,7 +172,7 @@ func Test_UploadAndPatchHandler(t *testing.T) {
 				si := storage.NewInMemoryStorage()
 				return Config{
 					StatsInstance: stats.NewStats(),
-					DataService:   &data.Service{StorageInstance: si},
+					DataService:   &data.Service{StorageInstance: &si},
 				}
 			}(),
 			args: args{
@@ -197,7 +197,7 @@ func Test_UploadAndPatchHandler(t *testing.T) {
 				si := storage.NewInMemoryStorage()
 				return Config{
 					StatsInstance: stats.NewStats(),
-					DataService:   &data.Service{StorageInstance: si},
+					DataService:   &data.Service{StorageInstance: &si},
 				}
 			}(),
 			args: args{
