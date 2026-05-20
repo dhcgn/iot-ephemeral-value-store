@@ -13,13 +13,13 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func newTestConfig() (Config, storage.StorageInstance) {
+func newTestConfig() (Config, *storage.StorageInstance) {
 	si := storage.NewInMemoryStorage()
 	return Config{
-		DataService:   &data.Service{StorageInstance: si},
+		DataService:   &data.Service{StorageInstance: &si},
 		StatsInstance: stats.NewStats(),
 		ServerHost:    "http://localhost:8080",
-	}, si
+	}, &si
 }
 
 func TestGenerateKeyPairHandler(t *testing.T) {

@@ -14,7 +14,7 @@ import (
 func newServerTestConfig(version string) Config {
 	si := storage.NewInMemoryStorage()
 	return Config{
-		DataService:   &data.Service{StorageInstance: si},
+		DataService:   &data.Service{StorageInstance: &si},
 		StatsInstance: stats.NewStats(),
 		ServerHost:    "http://localhost:8080",
 		Version:       version,

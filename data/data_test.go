@@ -8,9 +8,9 @@ import (
 	"github.com/dhcgn/iot-ephemeral-value-store/storage"
 )
 
-func newTestService() (*Service, storage.StorageInstance) {
+func newTestService() (*Service, *storage.StorageInstance) {
 	s := storage.NewInMemoryStorage()
-	return &Service{StorageInstance: s}, s
+	return &Service{StorageInstance: &s}, &s
 }
 
 func TestGenerateKeyPair(t *testing.T) {

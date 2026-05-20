@@ -30,7 +30,7 @@ func Test_DeleteHandler(t *testing.T) {
 				si := storage.NewInMemoryStorage()
 				return Config{
 					StatsInstance: stats.NewStats(),
-					DataService:   &data.Service{StorageInstance: si},
+					DataService:   &data.Service{StorageInstance: &si},
 				}
 			}(),
 			args: args{
@@ -53,7 +53,7 @@ func Test_DeleteHandler(t *testing.T) {
 				si := storage.NewInMemoryStorage()
 				return Config{
 					StatsInstance: stats.NewStats(),
-					DataService:   &data.Service{StorageInstance: si},
+					DataService:   &data.Service{StorageInstance: &si},
 				}
 			}(),
 			args: args{
@@ -77,7 +77,7 @@ func Test_DeleteHandler(t *testing.T) {
 				_ = si.Store("7790e6a7c72e97c2493334f7b22ffbaa2a41fc53a95268a4fbb45a9c34d9c5d1", map[string]interface{}{"key": "value"})
 				return Config{
 					StatsInstance: stats.NewStats(),
-					DataService:   &data.Service{StorageInstance: si},
+					DataService:   &data.Service{StorageInstance: &si},
 				}
 			}(),
 			args: args{

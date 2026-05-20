@@ -68,7 +68,7 @@ func Test_PlainDownloadHandler(t *testing.T) {
 				si := storage.NewInMemoryStorage()
 				return Config{
 					StatsInstance: stats.NewStats(),
-					DataService:   &data.Service{StorageInstance: si},
+					DataService:   &data.Service{StorageInstance: &si},
 				}
 			}(),
 			args: args{
@@ -95,7 +95,7 @@ func Test_PlainDownloadHandler(t *testing.T) {
 				s.Store("validKey", d)
 				return Config{
 					StatsInstance: stats.NewStats(),
-					DataService:   &data.Service{StorageInstance: s},
+					DataService:   &data.Service{StorageInstance: &s},
 				}
 			}(),
 			args: args{
@@ -122,7 +122,7 @@ func Test_PlainDownloadHandler(t *testing.T) {
 				s.Store("validKey", d)
 				return Config{
 					StatsInstance: stats.NewStats(),
-					DataService:   &data.Service{StorageInstance: s},
+					DataService:   &data.Service{StorageInstance: &s},
 				}
 			}(),
 			args: args{
@@ -148,7 +148,7 @@ func Test_PlainDownloadHandler(t *testing.T) {
 				s.StoreRawForTesting("validKey", []byte(`{"key": "value"`))
 				return Config{
 					StatsInstance: stats.NewStats(),
-					DataService:   &data.Service{StorageInstance: s},
+					DataService:   &data.Service{StorageInstance: &s},
 				}
 			}(),
 			args: args{
@@ -175,7 +175,7 @@ func Test_PlainDownloadHandler(t *testing.T) {
 				s.Store("validKey", d)
 				return Config{
 					StatsInstance: stats.NewStats(),
-					DataService:   &data.Service{StorageInstance: s},
+					DataService:   &data.Service{StorageInstance: &s},
 				}
 			}(),
 			args: args{
@@ -202,7 +202,7 @@ func Test_PlainDownloadHandler(t *testing.T) {
 				s.Store("validKey", d)
 				return Config{
 					StatsInstance: stats.NewStats(),
-					DataService:   &data.Service{StorageInstance: s},
+					DataService:   &data.Service{StorageInstance: &s},
 				}
 			}(),
 			args: args{
@@ -231,7 +231,7 @@ func Test_PlainDownloadHandler(t *testing.T) {
 				s.Store("validKey", d)
 				return Config{
 					StatsInstance: stats.NewStats(),
-					DataService:   &data.Service{StorageInstance: s},
+					DataService:   &data.Service{StorageInstance: &s},
 				}
 			}(),
 			args: args{
@@ -301,7 +301,7 @@ func Test_DownloadHandler(t *testing.T) {
 				si := storage.NewInMemoryStorage()
 				return Config{
 					StatsInstance: stats.NewStats(),
-					DataService:   &data.Service{StorageInstance: si},
+					DataService:   &data.Service{StorageInstance: &si},
 				}
 			}(),
 			args: args{
@@ -327,7 +327,7 @@ func Test_DownloadHandler(t *testing.T) {
 				s.Store("validKey", d)
 				return Config{
 					StatsInstance: stats.NewStats(),
-					DataService:   &data.Service{StorageInstance: s},
+					DataService:   &data.Service{StorageInstance: &s},
 				}
 			}(),
 			args: args{
@@ -391,7 +391,7 @@ func Test_DownloadRootHandler(t *testing.T) {
 				si := storage.NewInMemoryStorage()
 				return Config{
 					StatsInstance:    stats.NewStats(),
-					DataService:      &data.Service{StorageInstance: si},
+					DataService:      &data.Service{StorageInstance: &si},
 					DownloadTemplate: getTestDownloadTemplate(),
 				}
 			}(),
@@ -418,7 +418,7 @@ func Test_DownloadRootHandler(t *testing.T) {
 				s.Store("validKey", d)
 				return Config{
 					StatsInstance:    stats.NewStats(),
-					DataService:      &data.Service{StorageInstance: s},
+					DataService:      &data.Service{StorageInstance: &s},
 					DownloadTemplate: getTestDownloadTemplate(),
 				}
 			}(),
@@ -453,7 +453,7 @@ func Test_DownloadRootHandler(t *testing.T) {
 				s.Store("validKey", d)
 				return Config{
 					StatsInstance:    stats.NewStats(),
-					DataService:      &data.Service{StorageInstance: s},
+					DataService:      &data.Service{StorageInstance: &s},
 					DownloadTemplate: getTestDownloadTemplate(),
 				}
 			}(),
@@ -489,7 +489,7 @@ func Test_DownloadRootHandler(t *testing.T) {
 				s.Store("validKey", d)
 				return Config{
 					StatsInstance:    stats.NewStats(),
-					DataService:      &data.Service{StorageInstance: s},
+					DataService:      &data.Service{StorageInstance: &s},
 					DownloadTemplate: getTestDownloadTemplate(),
 				}
 			}(),
@@ -533,7 +533,7 @@ func Test_DownloadRootHandler(t *testing.T) {
 				s.Store("validKey", d)
 				return Config{
 					StatsInstance:    stats.NewStats(),
-					DataService:      &data.Service{StorageInstance: s},
+					DataService:      &data.Service{StorageInstance: &s},
 					DownloadTemplate: getTestDownloadTemplate(),
 				}
 			}(),
@@ -566,7 +566,7 @@ func Test_DownloadRootHandler(t *testing.T) {
 				s.StoreRawForTesting("validKey", []byte(`{"key": "value"`))
 				return Config{
 					StatsInstance:    stats.NewStats(),
-					DataService:      &data.Service{StorageInstance: s},
+					DataService:      &data.Service{StorageInstance: &s},
 					DownloadTemplate: getTestDownloadTemplate(),
 				}
 			}(),
