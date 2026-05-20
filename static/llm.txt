@@ -31,10 +31,8 @@ Generate a new upload/download key pair.
 **Output**:
 ```json
 {
-  "upload_key": "64-character hex string",
-  "download_key": "64-character hex string (SHA256 of upload key)",
-  "upload_url": "Example upload URL",
-  "download_url": "Example download URL",
+  "upload_key": "u_<64-character hex string>",
+  "download_key": "d_<64-character hex string (SHA256 of upload key)>",
   "message": "Instructions"
 }
 ```
@@ -61,11 +59,7 @@ Upload data, replacing any existing data for this key.
 ```json
 {
   "message": "Data uploaded successfully",
-  "download_url": "JSON download URL",
-  "parameter_urls": {
-    "key1": "Plain text URL for key1",
-    "key2": "Plain text URL for key2"
-  },
+  "download_key": "d_<64-character hex string>",
   "parameter_count": 2
 }
 ```
@@ -81,7 +75,7 @@ Merge new data with existing data (does not replace).
 ```json
 {
   "upload_key": "64-character hex string",
-  "path": "optional/nested/path",
+  "path": "optional/nested/path (empty string merges at root)",
   "parameters": {
     "key1": "value1",
     "key2": "value2"
@@ -93,14 +87,13 @@ Merge new data with existing data (does not replace).
 ```json
 {
   "message": "Data merged successfully",
-  "download_url": "JSON download URL",
-  "parameter_urls": { ... },
+  "download_key": "d_<64-character hex string>",
   "path": "The path where data was merged",
   "parameter_count": 2
 }
 ```
 
-**Use Case**: Perfect for multiple IoT devices updating different parts of a shared data structure. For example:
+**Use Case**: Perfect for multiple IoT devices updating different parts of a shared data structure. Use an empty `path` to merge at the root level. For example:
 - Device 1: `patch_data` with `path="living_room"`, `parameters={"temp":"22"}`
 - Device 2: `patch_data` with `path="bedroom"`, `parameters={"temp":"20"}`
 - Result: Nested JSON structure with both rooms
@@ -278,5 +271,5 @@ MIT License - See GitHub repository for details
 ---
 
 **Version**: 1.0.0  
-**MCP Protocol Version**: 2024-11-05  
-**Last Updated**: 2024
+**MCP Protocol Version**: 2025-03-26  
+**Last Updated**: 2026

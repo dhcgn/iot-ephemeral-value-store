@@ -100,6 +100,27 @@ func TestUploadDataHandler(t *testing.T) {
 		t.Fatal("Expected result to be non-nil")
 	}
 
+	// Verify response contract
+	textContent, ok := result.Content[0].(*mcp.TextContent)
+	if !ok {
+		t.Fatal("Expected text content")
+	}
+
+	var responseData map[string]interface{}
+	if err := json.Unmarshal([]byte(textContent.Text), &responseData); err != nil {
+		t.Fatalf("Expected valid JSON response, got error: %v", err)
+	}
+
+	if responseData["download_key"] == nil {
+		t.Error("Expected download_key in upload response")
+	}
+	if dk, ok := responseData["download_key"].(string); !ok || !strings.HasPrefix(dk, domain.DownloadKeyPrefix) {
+		t.Errorf("Expected download_key with prefix %q, got %v", domain.DownloadKeyPrefix, responseData["download_key"])
+	}
+	if responseData["parameter_count"] == nil {
+		t.Error("Expected parameter_count in upload response")
+	}
+
 	// Verify data was stored
 	storedData, err := si.GetJSON(downloadKey)
 	if err != nil {
@@ -158,8 +179,29 @@ func TestPatchDataHandler(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
+	// Verify response contract
 	if result == nil {
 		t.Fatal("Expected result to be non-nil")
+	}
+
+	textContent, ok := result.Content[0].(*mcp.TextContent)
+	if !ok {
+		t.Fatal("Expected text content in patch result")
+	}
+
+	var responseData map[string]interface{}
+	if err := json.Unmarshal([]byte(textContent.Text), &responseData); err != nil {
+		t.Fatalf("Expected valid JSON response, got error: %v", err)
+	}
+
+	if responseData["download_key"] == nil {
+		t.Error("Expected download_key in patch response")
+	}
+	if dk, ok := responseData["download_key"].(string); !ok || !strings.HasPrefix(dk, domain.DownloadKeyPrefix) {
+		t.Errorf("Expected download_key with prefix %q, got %v", domain.DownloadKeyPrefix, responseData["download_key"])
+	}
+	if responseData["path"] == nil {
+		t.Error("Expected path in patch response")
 	}
 
 	// Verify data was merged

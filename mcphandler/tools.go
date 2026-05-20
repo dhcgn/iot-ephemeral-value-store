@@ -28,7 +28,7 @@ var toolRegistry = []ToolDescriptor{
 	},
 	{
 		Name:        "patch_data",
-		Description: "Merge new data with existing data in the IoT ephemeral value store. This operation MERGES the new parameters with existing data rather than replacing it. You can specify a nested path (e.g., 'living_room/sensors') to organize data hierarchically. Perfect for multiple IoT devices updating different parts of a shared data structure. Each update includes an automatic timestamp.",
+		Description: "Merge new data with existing data in the IoT ephemeral value store. This operation MERGES the new parameters with existing data rather than replacing it. You can specify a nested path (e.g., 'living_room/sensors') to organize data hierarchically, or use an empty path to merge at the root level. Perfect for multiple IoT devices updating different parts of a shared data structure. Each update includes an automatic timestamp.",
 	},
 	{
 		Name:        "download_data",
@@ -52,6 +52,19 @@ func extractToolNames() []string {
 	return names
 }
 
+// toolResult is a helper that marshals a result map into an MCP CallToolResult.
+func toolResult(data map[string]interface{}) (*mcp.CallToolResult, error) {
+	resultJSON, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling result: %w", err)
+	}
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: string(resultJSON)},
+		},
+	}, nil
+}
+
 // GenerateKeyPairInput represents the input for generating a key pair.
 // The noop field exists to satisfy schema generators that disallow empty objects.
 type GenerateKeyPairInput struct {
@@ -67,7 +80,7 @@ type UploadDataInput struct {
 // PatchDataInput represents the input for patching data
 type PatchDataInput struct {
 	UploadKey  string            `json:"upload_key" jsonschema:"The upload key (256-bit hex string)"`
-	Path       string            `json:"path" jsonschema:"Nested path for the data (e.g. 'room1/sensors' creates nested structure)"`
+	Path       string            `json:"path" jsonschema:"Nested path for the data (e.g. 'room1/sensors' creates nested structure). Use empty string to merge at root level."`
 	Parameters map[string]string `json:"parameters" jsonschema:"Key-value pairs to merge at the specified path"`
 }
 
@@ -84,7 +97,6 @@ type DeleteDataInput struct {
 
 // GenerateKeyPairHandler handles the generation of upload/download key pairs
 func (c Config) GenerateKeyPairHandler(ctx context.Context, req *mcp.CallToolRequest, params *GenerateKeyPairInput) (*mcp.CallToolResult, any, error) {
-	// Check context cancellation
 	if ctx.Err() != nil {
 		return nil, nil, ctx.Err()
 	}
@@ -96,32 +108,24 @@ func (c Config) GenerateKeyPairHandler(ctx context.Context, req *mcp.CallToolReq
 		return nil, nil, err
 	}
 
-	result := map[string]interface{}{
+	result, err := toolResult(map[string]interface{}{
 		"upload_key":   domain.AddUploadPrefix(uploadKey),
 		"download_key": domain.AddDownloadPrefix(downloadKey),
 		"message":      "Key pair generated successfully. Use the upload key to store data and the download key to retrieve it. The upload key must be kept secret.",
-	}
-
-	resultJSON, err := json.MarshalIndent(result, "", "  ")
+	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("error marshaling result: %w", err)
+		return nil, nil, err
 	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			&mcp.TextContent{Text: string(resultJSON)},
-		},
-	}, nil, nil
+	return result, nil, nil
 }
 
 // UploadDataHandler handles data upload
 func (c Config) UploadDataHandler(ctx context.Context, req *mcp.CallToolRequest, params *UploadDataInput) (*mcp.CallToolResult, any, error) {
-	// Check context cancellation
 	if ctx.Err() != nil {
 		return nil, nil, ctx.Err()
 	}
 
-	_, _, err := c.DataService.Upload(params.UploadKey, params.Parameters)
+	downloadKey, _, err := c.DataService.Upload(params.UploadKey, params.Parameters)
 	if err != nil {
 		slog.Error("mcp upload_data: failed", "error", err)
 		c.StatsInstance.IncrementHTTPErrors()
@@ -129,31 +133,24 @@ func (c Config) UploadDataHandler(ctx context.Context, req *mcp.CallToolRequest,
 	}
 	c.StatsInstance.IncrementUploads()
 
-	result := map[string]interface{}{
+	result, err := toolResult(map[string]interface{}{
 		"message":         "Data uploaded successfully",
+		"download_key":    domain.AddDownloadPrefix(downloadKey),
 		"parameter_count": len(params.Parameters),
-	}
-
-	resultJSON, err := json.MarshalIndent(result, "", "  ")
+	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("error marshaling result: %w", err)
+		return nil, nil, err
 	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			&mcp.TextContent{Text: string(resultJSON)},
-		},
-	}, nil, nil
+	return result, nil, nil
 }
 
 // PatchDataHandler handles merging data into existing storage
 func (c Config) PatchDataHandler(ctx context.Context, req *mcp.CallToolRequest, params *PatchDataInput) (*mcp.CallToolResult, any, error) {
-	// Check context cancellation
 	if ctx.Err() != nil {
 		return nil, nil, ctx.Err()
 	}
 
-	_, _, err := c.DataService.Patch(params.UploadKey, params.Path, params.Parameters)
+	downloadKey, _, err := c.DataService.Patch(params.UploadKey, params.Path, params.Parameters)
 	if err != nil {
 		slog.Error("mcp patch_data: failed", "error", err, "path", params.Path)
 		c.StatsInstance.IncrementHTTPErrors()
@@ -161,35 +158,27 @@ func (c Config) PatchDataHandler(ctx context.Context, req *mcp.CallToolRequest, 
 	}
 	c.StatsInstance.IncrementUploads()
 
-	result := map[string]interface{}{
+	result, err := toolResult(map[string]interface{}{
 		"message":         "Data merged successfully",
+		"download_key":    domain.AddDownloadPrefix(downloadKey),
 		"path":            params.Path,
 		"parameter_count": len(params.Parameters),
-	}
-
-	resultJSON, err := json.MarshalIndent(result, "", "  ")
+	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("error marshaling result: %w", err)
+		return nil, nil, err
 	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			&mcp.TextContent{Text: string(resultJSON)},
-		},
-	}, nil, nil
+	return result, nil, nil
 }
 
 // DownloadDataHandler handles data retrieval
 func (c Config) DownloadDataHandler(ctx context.Context, req *mcp.CallToolRequest, params *DownloadDataInput) (*mcp.CallToolResult, any, error) {
-	// Check context cancellation
 	if ctx.Err() != nil {
 		return nil, nil, ctx.Err()
 	}
 
-	var result map[string]interface{}
+	var resultMap map[string]interface{}
 
 	if params.Parameter == "" {
-		// Return all data as JSON
 		jsonData, err := c.DataService.DownloadJSON(params.DownloadKey)
 		if err != nil {
 			slog.Error("mcp download_data: failed to retrieve data", "error", err)
@@ -206,12 +195,11 @@ func (c Config) DownloadDataHandler(ctx context.Context, req *mcp.CallToolReques
 
 		c.StatsInstance.IncrementDownloads()
 
-		result = map[string]interface{}{
+		resultMap = map[string]interface{}{
 			"data":    dataMap,
 			"message": "Retrieved all data as JSON",
 		}
 	} else {
-		// Retrieve specific parameter
 		value, err := c.DataService.DownloadField(params.DownloadKey, params.Parameter)
 		if err != nil {
 			slog.Error("mcp download_data: failed to retrieve field", "error", err, "parameter", params.Parameter)
@@ -221,28 +209,22 @@ func (c Config) DownloadDataHandler(ctx context.Context, req *mcp.CallToolReques
 
 		c.StatsInstance.IncrementDownloads()
 
-		result = map[string]interface{}{
+		resultMap = map[string]interface{}{
 			"data":      value,
 			"parameter": params.Parameter,
 			"message":   fmt.Sprintf("Retrieved parameter '%s'", params.Parameter),
 		}
 	}
 
-	resultJSON, err := json.MarshalIndent(result, "", "  ")
+	result, err := toolResult(resultMap)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error marshaling result: %w", err)
+		return nil, nil, err
 	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			&mcp.TextContent{Text: string(resultJSON)},
-		},
-	}, nil, nil
+	return result, nil, nil
 }
 
 // DeleteDataHandler handles data deletion
 func (c Config) DeleteDataHandler(ctx context.Context, req *mcp.CallToolRequest, params *DeleteDataInput) (*mcp.CallToolResult, any, error) {
-	// Check context cancellation
 	if ctx.Err() != nil {
 		return nil, nil, ctx.Err()
 	}
@@ -254,21 +236,14 @@ func (c Config) DeleteDataHandler(ctx context.Context, req *mcp.CallToolRequest,
 		return nil, nil, err
 	}
 
-	result := map[string]interface{}{
+	result, err := toolResult(map[string]interface{}{
 		"message": "Data deleted successfully",
 		"success": true,
-	}
-
-	resultJSON, err := json.MarshalIndent(result, "", "  ")
+	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("error marshaling result: %w", err)
+		return nil, nil, err
 	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			&mcp.TextContent{Text: string(resultJSON)},
-		},
-	}, nil, nil
+	return result, nil, nil
 }
 
 // RegisterTools registers all MCP tools with the server
@@ -309,12 +284,13 @@ func (c Config) RegisterTools(server *mcp.Server) {
 	}, c.DeleteDataHandler)
 }
 
-// getToolByName retrieves tool metadata by name
+// getToolByName retrieves tool metadata by name.
+// Panics if the name is not found to catch registry mismatches at startup.
 func getToolByName(name string) *ToolDescriptor {
 	for i, tool := range toolRegistry {
 		if tool.Name == name {
 			return &toolRegistry[i]
 		}
 	}
-	return nil // Should not happen if toolRegistry is properly maintained
+	panic(fmt.Sprintf("mcphandler: tool %q not found in toolRegistry — check for typos in RegisterTools", name))
 }
