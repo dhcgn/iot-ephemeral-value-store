@@ -4,24 +4,46 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 
 	"golang.org/x/time/rate"
 )
 
-// rateLimit is a middleware that limits the number of requests per second
-// Exclude local IP addresses from rate limiting for debugging and testing purposes
+// realIP extracts the real client IP from the request. When the server is
+// deployed behind a reverse proxy (e.g. Traefik), the actual client address is
+// forwarded via the X-Real-IP or X-Forwarded-For headers. Falls back to
+// r.RemoteAddr when no proxy headers are present.
+func realIP(r *http.Request) string {
+	if xri := r.Header.Get("X-Real-IP"); xri != "" {
+		return strings.TrimSpace(xri)
+	}
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		// X-Forwarded-For may be a comma-separated list; the first entry is the
+		// original client IP.
+		return strings.TrimSpace(strings.SplitN(xff, ",", 2)[0])
+	}
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return ip
+}
+
+// RateLimit is a middleware that limits the number of requests per second per
+// client IP. Local addresses and requests forwarded by a trusted reverse proxy
+// that originate from localhost are excluded from rate limiting.
 func (c Config) RateLimit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// In locla testing, r.RemoteAddr is empty
+		// In local testing, r.RemoteAddr is empty
 		if r.RemoteAddr == "" {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		ip, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
-			slog.Error("middleware: failed to parse remote address", "error", err, "remote_addr", r.RemoteAddr)
+		ip := realIP(r)
+		if ip == "" {
+			slog.Error("middleware: failed to parse remote address", "remote_addr", r.RemoteAddr)
 			c.StatsInstance.IncrementHTTPErrors()
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return

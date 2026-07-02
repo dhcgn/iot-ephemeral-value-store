@@ -69,3 +69,105 @@ func TestRateLimit(t *testing.T) {
 		})
 	}
 }
+
+func TestRealIP(t *testing.T) {
+	tests := []struct {
+		name       string
+		remoteAddr string
+		xRealIP    string
+		xForwardedFor string
+		want       string
+	}{
+		{
+			name:       "Uses RemoteAddr when no proxy headers",
+			remoteAddr: "1.2.3.4:5678",
+			want:       "1.2.3.4",
+		},
+		{
+			name:       "Prefers X-Real-IP over RemoteAddr",
+			remoteAddr: "172.19.0.7:1234",
+			xRealIP:    "203.0.113.5",
+			want:       "203.0.113.5",
+		},
+		{
+			name:          "Uses X-Forwarded-For when X-Real-IP absent",
+			remoteAddr:    "172.19.0.7:1234",
+			xForwardedFor: "203.0.113.10, 10.0.0.1",
+			want:          "203.0.113.10",
+		},
+		{
+			name:          "Prefers X-Real-IP over X-Forwarded-For",
+			remoteAddr:    "172.19.0.7:1234",
+			xRealIP:       "203.0.113.5",
+			xForwardedFor: "203.0.113.10",
+			want:          "203.0.113.5",
+		},
+		{
+			name:          "X-Forwarded-For with single entry",
+			remoteAddr:    "172.19.0.7:1234",
+			xForwardedFor: "198.51.100.42",
+			want:          "198.51.100.42",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/", nil)
+			req.RemoteAddr = tt.remoteAddr
+			if tt.xRealIP != "" {
+				req.Header.Set("X-Real-IP", tt.xRealIP)
+			}
+			if tt.xForwardedFor != "" {
+				req.Header.Set("X-Forwarded-For", tt.xForwardedFor)
+			}
+
+			got := realIP(req)
+			if got != tt.want {
+				t.Errorf("realIP() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRateLimit_BehindReverseProxy(t *testing.T) {
+	// Simulate Traefik forwarding requests from two different real clients.
+	// Both arrive with the same RemoteAddr (Traefik's internal IP), but
+	// with distinct X-Forwarded-For values. Each client should have its own
+	// rate limit bucket.
+	mockStats := stats.NewStats()
+	config := Config{
+		RateLimitPerSecond: 2,
+		RateLimitBurst:     1,
+		StatsInstance:      mockStats,
+	}
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	mw := config.RateLimit(handler)
+
+	makeReq := func(xff string) *http.Request {
+		req := httptest.NewRequest("GET", "/", nil)
+		req.RemoteAddr = "172.19.0.7:12345"
+		req.Header.Set("X-Forwarded-For", xff)
+		return req
+	}
+
+	// Exhaust the bucket for client A.
+	reqA := makeReq("203.0.113.1")
+	for i := 0; i < 10; i++ {
+		rr := httptest.NewRecorder()
+		mw.ServeHTTP(rr, reqA)
+		if rr.Code == http.StatusTooManyRequests {
+			break
+		}
+	}
+
+	// Client B should still be allowed on its first request.
+	reqB := makeReq("203.0.113.2")
+	rr := httptest.NewRecorder()
+	mw.ServeHTTP(rr, reqB)
+	if rr.Code == http.StatusTooManyRequests {
+		t.Error("client B should not be rate limited when only client A has exceeded the limit")
+	}
+}
