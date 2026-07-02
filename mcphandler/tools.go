@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"log/slog"
 
 	"github.com/dhcgn/iot-ephemeral-value-store/domain"
@@ -125,7 +126,7 @@ func (c Config) UploadDataHandler(ctx context.Context, req *mcp.CallToolRequest,
 		return nil, nil, ctx.Err()
 	}
 
-	downloadKey, _, err := c.DataService.Upload(params.UploadKey, params.Parameters)
+	downloadKey, _, err := c.DataService.Upload(ctx, params.UploadKey, params.Parameters)
 	if err != nil {
 		slog.Error("mcp upload_data: failed", "error", err)
 		c.StatsInstance.IncrementHTTPErrors()
@@ -150,7 +151,7 @@ func (c Config) PatchDataHandler(ctx context.Context, req *mcp.CallToolRequest, 
 		return nil, nil, ctx.Err()
 	}
 
-	downloadKey, _, err := c.DataService.Patch(params.UploadKey, params.Path, params.Parameters)
+	downloadKey, _, err := c.DataService.Patch(ctx, params.UploadKey, params.Path, params.Parameters)
 	if err != nil {
 		slog.Error("mcp patch_data: failed", "error", err, "path", params.Path)
 		c.StatsInstance.IncrementHTTPErrors()
@@ -179,7 +180,7 @@ func (c Config) DownloadDataHandler(ctx context.Context, req *mcp.CallToolReques
 	var resultMap map[string]interface{}
 
 	if params.Parameter == "" {
-		jsonData, err := c.DataService.DownloadJSON(params.DownloadKey)
+		jsonData, err := c.DataService.DownloadJSON(ctx, params.DownloadKey)
 		if err != nil {
 			slog.Error("mcp download_data: failed to retrieve data", "error", err)
 			c.StatsInstance.IncrementHTTPErrors()
@@ -200,7 +201,7 @@ func (c Config) DownloadDataHandler(ctx context.Context, req *mcp.CallToolReques
 			"message": "Retrieved all data as JSON",
 		}
 	} else {
-		value, err := c.DataService.DownloadField(params.DownloadKey, params.Parameter)
+		value, err := c.DataService.DownloadField(ctx, params.DownloadKey, params.Parameter)
 		if err != nil {
 			slog.Error("mcp download_data: failed to retrieve field", "error", err, "parameter", params.Parameter)
 			c.StatsInstance.IncrementHTTPErrors()
@@ -229,7 +230,7 @@ func (c Config) DeleteDataHandler(ctx context.Context, req *mcp.CallToolRequest,
 		return nil, nil, ctx.Err()
 	}
 
-	_, err := c.DataService.Delete(params.UploadKey)
+	_, err := c.DataService.Delete(ctx, params.UploadKey)
 	if err != nil {
 		slog.Error("mcp delete_data: failed", "error", err)
 		c.StatsInstance.IncrementHTTPErrors()
@@ -285,12 +286,13 @@ func (c Config) RegisterTools(server *mcp.Server) {
 }
 
 // getToolByName retrieves tool metadata by name.
-// Panics if the name is not found to catch registry mismatches at startup.
+// Calls log.Fatal if the name is not found, catching registry mismatches at startup.
 func getToolByName(name string) *ToolDescriptor {
 	for i, tool := range toolRegistry {
 		if tool.Name == name {
 			return &toolRegistry[i]
 		}
 	}
-	panic(fmt.Sprintf("mcphandler: tool %q not found in toolRegistry — check for typos in RegisterTools", name))
+	log.Fatalf("mcphandler: tool %q not found in toolRegistry — check for typos in RegisterTools", name)
+	return nil
 }

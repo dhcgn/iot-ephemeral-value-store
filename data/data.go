@@ -1,6 +1,7 @@
 package data
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -26,7 +27,7 @@ func (s *Service) GenerateKeyPair() (uploadKey, downloadKey string, err error) {
 
 // Upload validates the upload key, replaces all data with the given params
 // (adding a root timestamp), and stores it. Returns the download key and stored data.
-func (s *Service) Upload(uploadKey string, params map[string]string) (downloadKey string, storedData map[string]interface{}, err error) {
+func (s *Service) Upload(ctx context.Context, uploadKey string, params map[string]string) (downloadKey string, storedData map[string]interface{}, err error) {
 	if err := domain.ValidateUploadKey(uploadKey); err != nil {
 		return "", nil, fmt.Errorf("invalid upload key: %w", err)
 	}
@@ -42,7 +43,7 @@ func (s *Service) Upload(uploadKey string, params map[string]string) (downloadKe
 	}
 	data["timestamp"] = time.Now().UTC().Format(time.RFC3339)
 
-	if err := s.StorageInstance.Store(downloadKey, data); err != nil {
+	if err := s.StorageInstance.Store(ctx, downloadKey, data); err != nil {
 		return "", nil, fmt.Errorf("error storing data: %w", err)
 	}
 
@@ -51,7 +52,7 @@ func (s *Service) Upload(uploadKey string, params map[string]string) (downloadKe
 
 // Patch validates the upload key, retrieves existing data, merges the given
 // params at the specified path, adds a root timestamp, and stores the result.
-func (s *Service) Patch(uploadKey string, path string, params map[string]string) (downloadKey string, storedData map[string]interface{}, err error) {
+func (s *Service) Patch(ctx context.Context, uploadKey string, path string, params map[string]string) (downloadKey string, storedData map[string]interface{}, err error) {
 	if err := domain.ValidateUploadKey(uploadKey); err != nil {
 		return "", nil, fmt.Errorf("invalid upload key: %w", err)
 	}
@@ -61,7 +62,7 @@ func (s *Service) Patch(uploadKey string, path string, params map[string]string)
 		return "", nil, fmt.Errorf("error deriving download key: %w", err)
 	}
 
-	existingData, err := s.StorageInstance.Retrieve(downloadKey)
+	existingData, err := s.StorageInstance.Retrieve(ctx, downloadKey)
 	if err != nil {
 		return "", nil, fmt.Errorf("error retrieving existing data: %w", err)
 	}
@@ -75,7 +76,7 @@ func (s *Service) Patch(uploadKey string, path string, params map[string]string)
 
 	existingData["timestamp"] = time.Now().UTC().Format(time.RFC3339)
 
-	if err := s.StorageInstance.Store(downloadKey, existingData); err != nil {
+	if err := s.StorageInstance.Store(ctx, downloadKey, existingData); err != nil {
 		return "", nil, fmt.Errorf("error storing data: %w", err)
 	}
 
@@ -83,9 +84,9 @@ func (s *Service) Patch(uploadKey string, path string, params map[string]string)
 }
 
 // DownloadJSON retrieves the raw JSON bytes for the given download key.
-func (s *Service) DownloadJSON(downloadKey string) ([]byte, error) {
+func (s *Service) DownloadJSON(ctx context.Context, downloadKey string) ([]byte, error) {
 	downloadKey = domain.StripDownloadPrefix(downloadKey)
-	jsonData, err := s.StorageInstance.GetJSON(downloadKey)
+	jsonData, err := s.StorageInstance.GetJSON(ctx, downloadKey)
 	if err != nil {
 		return nil, fmt.Errorf("invalid download key or data not found: %w", err)
 	}
@@ -94,9 +95,9 @@ func (s *Service) DownloadJSON(downloadKey string) ([]byte, error) {
 
 // DownloadField retrieves a specific field from the stored data by traversing
 // the nested map using the given slash-separated field path.
-func (s *Service) DownloadField(downloadKey string, fieldPath string) (interface{}, error) {
+func (s *Service) DownloadField(ctx context.Context, downloadKey string, fieldPath string) (interface{}, error) {
 	downloadKey = domain.StripDownloadPrefix(downloadKey)
-	data, err := s.StorageInstance.Retrieve(downloadKey)
+	data, err := s.StorageInstance.Retrieve(ctx, downloadKey)
 	if err != nil {
 		return nil, fmt.Errorf("invalid download key or data not found: %w", err)
 	}
@@ -109,7 +110,7 @@ func (s *Service) DownloadField(downloadKey string, fieldPath string) (interface
 }
 
 // Delete validates the upload key and deletes the associated data.
-func (s *Service) Delete(uploadKey string) (downloadKey string, err error) {
+func (s *Service) Delete(ctx context.Context, uploadKey string) (downloadKey string, err error) {
 	if err := domain.ValidateUploadKey(uploadKey); err != nil {
 		return "", fmt.Errorf("invalid upload key: %w", err)
 	}
@@ -119,7 +120,7 @@ func (s *Service) Delete(uploadKey string) (downloadKey string, err error) {
 		return "", fmt.Errorf("error deriving download key: %w", err)
 	}
 
-	if err := s.StorageInstance.Delete(downloadKey); err != nil {
+	if err := s.StorageInstance.Delete(ctx, downloadKey); err != nil {
 		return "", fmt.Errorf("error deleting data: %w", err)
 	}
 

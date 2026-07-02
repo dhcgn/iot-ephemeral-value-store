@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 )
 
@@ -40,7 +41,7 @@ func GenerateRandomKey() string {
 	randomBytes := make([]byte, 256/8)
 	_, err := rand.Read(randomBytes)
 	if err != nil {
-		panic("Failed to generate random bytes: " + err.Error())
+		log.Fatal("Failed to generate random bytes: " + err.Error())
 	}
 	return hex.EncodeToString(randomBytes)
 }
