@@ -175,9 +175,8 @@ services:
 
 **Traefik proxy example with auto-detected trusted CIDR:**
 ```bash
-docker run -p 8080:8080 \
-  dhcgn/iot-ephemeral-value-store-server \
-  -trusted-proxies="$(docker inspect traefik --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' | xargs -r -I{} docker network inspect {} -f '{{(index .IPAM.Config 0).Subnet}}' | paste -sd, -)"
+TRAEFIK_CIDRS="$(docker inspect traefik --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' | xargs -r -I{} docker network inspect {} -f '{{(index .IPAM.Config 0).Subnet}}' | paste -sd, -)"
+docker run -p 8080:8080 dhcgn/iot-ephemeral-value-store-server -trusted-proxies="$TRAEFIK_CIDRS"
 ```
 
 For Docker Compose with Traefik/HTTPS setup, see **[README.TechDetails.md](README.TechDetails.md#deployment-options)**.
