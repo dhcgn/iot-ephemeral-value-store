@@ -185,7 +185,8 @@ This builds a comma-separated list of all Docker network CIDRs attached to the T
 ```bash
 TRAEFIK_CIDRS="$(
   docker inspect traefik --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' |
-    while read -r net; do
+    while IFS= read -r net; do
+      [[ -z "$net" ]] && continue
       docker network inspect "$net" -f '{{(index .IPAM.Config 0).Subnet}}'
     done |
     awk 'BEGIN { first = 1 } { if (!first) printf ","; printf "%s", $0; first = 0 } END { print "" }'
@@ -216,9 +217,11 @@ bash <(curl -s https://raw.githubusercontent.com/dhcgn/iot-ephemeral-value-store
 **Linux command to get the Traefik Docker network CIDR(s):**
 ```bash
 docker inspect traefik --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' |
-  while read -r net; do
-    docker network inspect "$net" -f '{{.Name}} {{(index .IPAM.Config 0).Subnet}}'
-  done
+  while IFS= read -r net; do
+    [[ -z "$net" ]] && continue
+    docker network inspect "$net" -f '{{(index .IPAM.Config 0).Subnet}}'
+  done |
+  awk 'BEGIN { first = 1 } { if (!first) printf ","; printf "%s", $0; first = 0 } END { print "" }'
 ```
 Replace `traefik` with your Traefik container name if different.
 
