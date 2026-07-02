@@ -173,6 +173,13 @@ services:
     command: -persist-values-for 24h -store /data
 ```
 
+**Docker Compose behind Traefik with per-client rate limiting:**
+```bash
+docker run -p 8080:8080 \
+  dhcgn/iot-ephemeral-value-store-server \
+  -trusted-proxies="$(docker inspect traefik --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' | xargs -r -I{} docker network inspect {} -f '{{(index .IPAM.Config 0).Subnet}}' | paste -sd, -)"
+```
+
 For Docker Compose with Traefik/HTTPS setup, see **[README.TechDetails.md](README.TechDetails.md#deployment-options)**.
 
 ### Run Binary
@@ -190,6 +197,12 @@ bash <(curl -s https://raw.githubusercontent.com/dhcgn/iot-ephemeral-value-store
 - `-persist-values-for`: Data retention duration (default: "24h")
 - `-store`: Storage directory path (default: "./data")
 - `-port`: Server port (default: 8080)
+- `-trusted-proxies`: Comma-separated list of trusted proxy CIDRs or IPs. When set, `X-Real-IP` and `X-Forwarded-For` from these proxies are used for rate limiting. Useful when running behind Traefik or another reverse proxy.
+
+**Linux command to get the Traefik Docker network CIDR(s):**
+```bash
+docker inspect traefik --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' | xargs -r -I{} docker network inspect {} -f '{{.Name}} {{(index .IPAM.Config 0).Subnet}}'
+```
 
 ## Built-in Web Interface
 
