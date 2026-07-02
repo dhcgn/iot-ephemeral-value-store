@@ -28,13 +28,13 @@ type testCase struct {
 	bodyNotContains    string
 }
 
-func createTestEnvironment(t *testing.T) (*stats.Stats, *stats.Stats, httphandler.Config, middleware.Config) {
+func createTestEnvironment(t *testing.T) (*stats.Stats, *stats.Stats, httphandler.Config, middleware.Config, *storage.StorageInstance) {
 	restStats := stats.NewStats()
 	mcpStats := stats.NewStats()
 	storageInMemory := storage.NewInMemoryStorage()
 
 	httphandlerConfig := httphandler.Config{
-		DataService:   &data.Service{StorageInstance: storageInMemory},
+		DataService:   &data.Service{StorageInstance: &storageInMemory},
 		StatsInstance: restStats,
 	}
 
@@ -45,7 +45,7 @@ func createTestEnvironment(t *testing.T) (*stats.Stats, *stats.Stats, httphandle
 		StatsInstance:      restStats,
 	}
 
-	return restStats, mcpStats, httphandlerConfig, middlewareConfig
+	return restStats, mcpStats, httphandlerConfig, middlewareConfig, &storageInMemory
 }
 
 func runTests(t *testing.T, router http.Handler, tests []testCase) {
@@ -75,8 +75,8 @@ func buildURL(format string, a ...interface{}) string {
 }
 
 func TestCreateRouter(t *testing.T) {
-	restStats, mcpStats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
-	router := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats)
+	restStats, mcpStats, httphandlerConfig, middlewareConfig, storageInst := createTestEnvironment(t)
+	router := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats, storageInst)
 
 	tests := []testCase{
 		{"GET /", "/", http.StatusOK, false, "", ""},
@@ -89,8 +89,8 @@ func TestCreateRouter(t *testing.T) {
 }
 
 func TestRoutesUploadDownload(t *testing.T) {
-	restStats, mcpStats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
-	router := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats)
+	restStats, mcpStats, httphandlerConfig, middlewareConfig, storageInst := createTestEnvironment(t)
+	router := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats, storageInst)
 
 	tests := []testCase{
 		{"Upload", buildURL("/u/%s/?value=8923423", keyUp), http.StatusOK, true, "Data uploaded successfully", ""},
@@ -102,8 +102,8 @@ func TestRoutesUploadDownload(t *testing.T) {
 }
 
 func TestRoutesUploadDownloadWithBase64(t *testing.T) {
-	restStats, mcpStats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
-	router := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats)
+	restStats, mcpStats, httphandlerConfig, middlewareConfig, storageInst := createTestEnvironment(t)
+	router := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats, storageInst)
 
 	tests := []testCase{
 		{"Upload", buildURL("/u/%s/?value=SGFsbG8gV2VsdCEK", keyUp), http.StatusOK, true, "Data uploaded successfully", ""},
@@ -116,8 +116,8 @@ func TestRoutesUploadDownloadWithBase64(t *testing.T) {
 }
 
 func TestRoutesUploadDownloadDelete(t *testing.T) {
-	restStats, mcpStats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
-	router := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats)
+	restStats, mcpStats, httphandlerConfig, middlewareConfig, storageInst := createTestEnvironment(t)
+	router := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats, storageInst)
 
 	tests := []testCase{
 		{"Upload", buildURL("/u/%s/?value=8923423", keyUp), http.StatusOK, true, "Data uploaded successfully", ""},
@@ -132,8 +132,8 @@ func TestRoutesUploadDownloadDelete(t *testing.T) {
 }
 
 func TestRoutesPatchDownload(t *testing.T) {
-	restStats, mcpStats, httphandlerConfig, middlewareConfig := createTestEnvironment(t)
-	router := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats)
+	restStats, mcpStats, httphandlerConfig, middlewareConfig, storageInst := createTestEnvironment(t)
+	router := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats, storageInst)
 
 	tests := []testCase{
 		{"Upload patch level 0", buildURL("/patch/%s/?value=1_4324232", keyUp), http.StatusOK, true, "Data uploaded successfully", ""},

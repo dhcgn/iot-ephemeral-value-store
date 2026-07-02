@@ -31,7 +31,7 @@ func Test_KeyPairHandler(t *testing.T) {
 				si := storage.NewInMemoryStorage()
 				return Config{
 					StatsInstance: stats.NewStats(),
-					DataService:   &data.Service{StorageInstance: si},
+					DataService:   &data.Service{StorageInstance: &si},
 				}
 			}(),
 			args: args{

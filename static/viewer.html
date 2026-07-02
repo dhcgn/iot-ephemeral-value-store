@@ -509,6 +509,21 @@
             color: #333;
             word-break: break-all;
         }
+
+        .inline-curl {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        .inline-curl .key-value {
+            margin: 0;
+            flex: 1;
+            min-width: 220px;
+            font-size: 12px;
+        }
     </style>
 </head>
 
@@ -544,10 +559,9 @@
             <p>Monitor your IoT data in real-time. Add download keys to watch for changes, and this viewer will
                 periodically poll the server to display the latest values.</p>
             <div class="info-box">
-                <strong>⚠️ Important:</strong> This viewer uses <strong>download keys</strong> to retrieve data. Each
-                key pair consists of an <strong>upload key</strong> (for devices to send data) and a <strong>download
-                    key</strong> (for viewing data). You can only watch data using the download key. To create a new
-                key pair, use the "Create New Key Pair" button below.
+                <strong>⚠️ Important:</strong> You can add either an <strong>upload key</strong> (u_) or
+                <strong>download key</strong> (d_). If you enter a u_ key, the matching d_ key is derived
+                automatically for viewing.
             </div>
         </div>
 
@@ -555,8 +569,8 @@
             <h2>⚙️ Controls</h2>
 
             <div class="input-group">
-                <input type="text" id="downloadKeyInput" placeholder="Enter download key (64 hex characters)">
-                <button class="btn btn-primary" onclick="addKey()">Add Download Key</button>
+                <input type="text" id="downloadKeyInput" placeholder="Enter u_, d_, or 64-hex key">
+                <button class="btn btn-primary" onclick="addKey()">Add Key</button>
                 <button class="btn btn-success" onclick="createNewKeyPair()">Create New Key Pair</button>
             </div>
 
@@ -670,28 +684,84 @@
             startPolling();
         }
 
-        // Validate download key format (64 hex characters)
-        function isValidDownloadKey(key) {
-            return /^[a-fA-F0-9]{64}$/.test(key);
+        // Normalize user key input: accepts u_, d_, or raw 64-hex
+        function parseWatchedKeyInput(value) {
+            const trimmed = value.trim();
+            if (!trimmed) {
+                return { error: 'Please enter a key.' };
+            }
+
+            let type = 'download';
+            let rawHex = trimmed;
+
+            if (/^[uU]_/.test(trimmed)) {
+                type = 'upload';
+                rawHex = trimmed.slice(2);
+            } else if (/^[dD]_/.test(trimmed)) {
+                type = 'download';
+                rawHex = trimmed.slice(2);
+            }
+
+            if (!/^[a-fA-F0-9]{64}$/.test(rawHex)) {
+                return { error: 'Invalid key format. Use u_ or d_ followed by 64 hexadecimal characters.' };
+            }
+
+            return {
+                type,
+                rawHex,
+                uploadKey: `u_${rawHex}`,
+                downloadKey: `d_${rawHex}`
+            };
+        }
+
+        // Compare keys by raw download hash to avoid duplicates across prefixed/raw forms
+        function rawDownloadKeyId(downloadKey) {
+            const key = String(downloadKey || '').trim();
+            return /^[dD]_/.test(key) ? key.slice(2) : key;
+        }
+
+        // Derive d_ key from upload key raw hex using SHA-256 (same logic as backend)
+        async function deriveDownloadKeyFromUploadRaw(rawUploadHex) {
+            if (!window.crypto || !window.crypto.subtle) {
+                throw new Error('Browser crypto API is not available.');
+            }
+
+            const bytes = new TextEncoder().encode(rawUploadHex);
+            const digest = await window.crypto.subtle.digest('SHA-256', bytes);
+            const hash = Array.from(new Uint8Array(digest))
+                .map(byte => byte.toString(16).padStart(2, '0'))
+                .join('');
+
+            return `d_${hash}`;
         }
 
         // Add a new key to watch
-        function addKey() {
+        async function addKey() {
             const input = document.getElementById('downloadKeyInput');
-            const downloadKey = input.value.trim();
+            const parsed = parseWatchedKeyInput(input.value);
 
-            if (!downloadKey) {
-                alert('Please enter a download key.');
+            if (parsed.error) {
+                alert(parsed.error);
                 return;
             }
 
-            if (!isValidDownloadKey(downloadKey)) {
-                alert('Invalid download key format. Must be 64 hexadecimal characters.');
-                return;
+            let uploadKey = null;
+            let downloadKey = parsed.downloadKey;
+
+            if (parsed.type === 'upload') {
+                uploadKey = parsed.uploadKey;
+                try {
+                    downloadKey = await deriveDownloadKeyFromUploadRaw(parsed.rawHex);
+                } catch (e) {
+                    console.error('Error deriving download key:', e);
+                    alert('Failed to derive download key from upload key: ' + e.message);
+                    return;
+                }
             }
 
-            // Check if key already exists
-            if (watchedKeys.find(k => k.downloadKey === downloadKey)) {
+            // Check if key already exists (raw hash comparison)
+            const newKeyRawId = rawDownloadKeyId(downloadKey);
+            if (watchedKeys.find(k => rawDownloadKeyId(k.downloadKey) === newKeyRawId)) {
                 alert('This key is already being watched.');
                 return;
             }
@@ -699,7 +769,7 @@
             // Add the key
             watchedKeys.push({
                 downloadKey: downloadKey,
-                uploadKey: null,
+                uploadKey: uploadKey,
                 name: '',
                 data: null,
                 lastUpdated: null,
@@ -807,6 +877,74 @@
             }
         }
 
+        // Clear data for a key (requires upload key)
+        async function clearKeyData(downloadKey) {
+            const keyObj = watchedKeys.find(k => k.downloadKey === downloadKey);
+            if (!keyObj || !keyObj.uploadKey) {
+                alert('Clear is only available when an upload key is known.');
+                return;
+            }
+
+            if (!confirm('Clear server data for this key?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/delete/${encodeURIComponent(keyObj.uploadKey)}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                keyObj.data = null;
+                keyObj.error = null;
+                keyObj.status = 'success';
+                keyObj.lastUpdated = new Date().toISOString();
+                saveKeysToStorage();
+                renderKeys();
+            } catch (e) {
+                console.error('Error clearing key data:', e);
+                alert('Failed to clear data: ' + e.message);
+            }
+        }
+
+        // Clear data (wrapper for DOM event)
+        function clearKeyDataFromElement(element) {
+            const downloadKey = getDownloadKeyFromElement(element);
+            if (downloadKey) {
+                clearKeyData(downloadKey);
+            }
+        }
+
+        function buildDownloadCurlCommand(downloadKey) {
+            return `curl "${window.location.origin}/d/${downloadKey}/json"`;
+        }
+
+        async function copyDownloadCurlFromElement(element) {
+            const downloadKey = getDownloadKeyFromElement(element);
+            if (!downloadKey) {
+                return;
+            }
+
+            const command = buildDownloadCurlCommand(downloadKey);
+            try {
+                await navigator.clipboard.writeText(command);
+            } catch (err) {
+                const textArea = document.createElement('textarea');
+                textArea.value = command;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-9999px';
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                } catch (copyErr) {
+                    console.error('Clipboard copy failed:', copyErr);
+                    alert('Failed to copy curl command to clipboard.');
+                }
+                document.body.removeChild(textArea);
+            }
+        }
+
         // Fetch data for a specific key
         async function fetchKeyData(downloadKey) {
             const keyObj = watchedKeys.find(k => k.downloadKey === downloadKey);
@@ -895,6 +1033,12 @@
                                 key.status === 'error' ? 'status-error' : 'status-polling';
             const statusText = key.status === 'success' ? 'Data loaded' : 
                               key.status === 'error' ? 'Error' : 'Pending';
+            const clearButton = key.uploadKey ? `
+                            <button class="btn btn-secondary btn-small" onclick="clearKeyDataFromElement(this)">
+                                🧹 Clear
+                            </button>
+            ` : '';
+            const downloadCurlCommand = buildDownloadCurlCommand(key.downloadKey);
 
             let uploadKeySection = '';
             if (key.uploadKey) {
@@ -942,6 +1086,7 @@
                             <button class="btn btn-success btn-small" onclick="showUploadCurlFromElement(this)">
                                 📤 Upload
                             </button>
+                            ${clearButton}
                             <button class="btn btn-danger btn-small" onclick="removeKeyFromElement(this)">
                                 🗑️ Remove
                             </button>
@@ -950,6 +1095,10 @@
                     <div>
                         <div class="key-label">Download Key (for viewing):</div>
                         <div class="key-value">${escapeHtml(key.downloadKey)}</div>
+                        <div class="inline-curl">
+                            <div class="key-value">${escapeHtml(downloadCurlCommand)}</div>
+                            <button class="btn btn-secondary btn-small" onclick="copyDownloadCurlFromElement(this)">📋 Copy curl</button>
+                        </div>
                     </div>
                     ${uploadKeySection}
                     ${key.lastUpdated ? `<div class="timestamp">Last updated: ${new Date(key.lastUpdated).toLocaleString()}</div>` : ''}

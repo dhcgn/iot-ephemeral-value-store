@@ -9,9 +9,23 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"time"
 
-	"github.com/dgraph-io/badger/v3"
+	"github.com/dgraph-io/badger/v4"
+)
+
+// ErrStorageTimeout indicates a storage operation exceeded its deadline.
+// The underlying write may still complete; callers must not assume the
+// operation failed.
+var ErrStorageTimeout = errors.New("storage operation timed out (commit status unknown)")
+
+// ErrStorageDegraded indicates the storage backend is in a degraded state
+// after a previous timeout, and new write operations are temporarily rejected.
+var ErrStorageDegraded = errors.New("storage is degraded after a timeout, write rejected")
+
+const (
+	defaultWriteTimeout = 10 * time.Second
 )
 
 // DefaultOperationTimeout is the maximum time a single BadgerDB transaction
@@ -36,6 +50,7 @@ func (badgerSlogLogger) Debugf(format string, args ...interface{}) {
 	slog.Debug(fmt.Sprintf("badger: "+format, args...))
 }
 
+<<<<<<< HEAD
 // valueLogGCDiscardRatio is the ratio passed to RunValueLogGC.
 // A value of 0.5 means Badger will rewrite a value log file if it can
 // discard at least 50% of its space.
@@ -53,6 +68,22 @@ type StorageInstance struct {
 // IoT data. All methods accept a context.Context so that callers (e.g. HTTP
 // handlers) can propagate deadlines and cancellation to the underlying
 // database operations.
+=======
+// StorageInstance wraps a BadgerDB database with write-timeout protection
+// and a degraded-state circuit breaker.
+type StorageInstance struct {
+	Db              *badger.DB
+	PersistDuration time.Duration
+	WriteTimeout    time.Duration
+	storePath       string
+
+	// degraded is set to 1 after a write timeout to reject further writes
+	// and prevent goroutine accumulation from a hung BadgerDB.
+	degraded atomic.Int32
+}
+
+// Storage defines the data access interface for the value store.
+>>>>>>> origin/main
 type Storage interface {
 	GetJSON(ctx context.Context, downloadKey string) ([]byte, error)
 	Delete(ctx context.Context, downloadKey string) error
@@ -91,6 +122,19 @@ func startValueLogGC(db *badger.DB, interval time.Duration, stopCh chan struct{}
 	}()
 }
 
+// HealthChecker reports the health of the storage backend.
+type HealthChecker interface {
+	CheckHealth() HealthStatus
+}
+
+// HealthStatus contains the result of a storage health check.
+type HealthStatus struct {
+	Healthy      bool   `json:"healthy"`
+	Degraded     bool   `json:"degraded"`
+	Message      string `json:"message,omitempty"`
+	DiskFreeBytes int64 `json:"disk_free_bytes,omitempty"`
+}
+
 func NewInMemoryStorage() StorageInstance {
 	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true).WithLogger(badgerSlogLogger{}))
 	if err != nil {
@@ -98,8 +142,14 @@ func NewInMemoryStorage() StorageInstance {
 	}
 
 	return StorageInstance{
+<<<<<<< HEAD
 		Db:              db,
 		PersistDuration: time.Duration(1 * time.Minute),
+=======
+		Db:           db,
+		PersistDuration: 1 * time.Minute,
+		WriteTimeout: defaultWriteTimeout,
+>>>>>>> origin/main
 	}
 }
 
@@ -127,6 +177,7 @@ func NewPersistentStorage(storePath string, persistDuration time.Duration) Stora
 	return StorageInstance{
 		Db:              db,
 		PersistDuration: persistDuration,
+<<<<<<< HEAD
 		stopGC:          stopCh,
 	}
 }
@@ -200,6 +251,52 @@ func contextWithFallbackTimeout(ctx context.Context) (context.Context, context.C
 }
 
 func (c StorageInstance) GetJSON(ctx context.Context, downloadKey string) ([]byte, error) {
+=======
+		WriteTimeout:    defaultWriteTimeout,
+		storePath:       absStorePath,
+	}
+}
+
+// updateWithTimeout runs a badger Update with a write timeout and
+// circuit-breaker protection. If the operation times out, the storage
+// is marked as degraded and subsequent writes are rejected.
+func (c *StorageInstance) updateWithTimeout(fn func(txn *badger.Txn) error) error {
+	if c.degraded.Load() != 0 {
+		return ErrStorageDegraded
+	}
+
+	type result struct {
+		err error
+	}
+	ch := make(chan result, 1)
+	go func() {
+		ch <- result{err: c.Db.Update(fn)}
+	}()
+
+	select {
+	case res := <-ch:
+		return res.err
+	case <-time.After(c.WriteTimeout):
+		c.degraded.Store(1)
+		slog.Error("storage write timed out, marking storage as degraded",
+			"timeout", c.WriteTimeout.String())
+		return ErrStorageTimeout
+	}
+}
+
+// ResetDegraded clears the degraded state, allowing writes again.
+// This should be called after verifying the storage is healthy.
+func (c *StorageInstance) ResetDegraded() {
+	c.degraded.Store(0)
+}
+
+// IsDegraded reports whether the storage is in a degraded state.
+func (c *StorageInstance) IsDegraded() bool {
+	return c.degraded.Load() != 0
+}
+
+func (c *StorageInstance) GetJSON(downloadKey string) ([]byte, error) {
+>>>>>>> origin/main
 	var jsonData []byte
 	err := c.viewWithContext(ctx, func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(downloadKey))
@@ -212,27 +309,42 @@ func (c StorageInstance) GetJSON(ctx context.Context, downloadKey string) ([]byt
 	return jsonData, err
 }
 
+<<<<<<< HEAD
 func (c StorageInstance) Store(ctx context.Context, downloadKey string, dataToStore map[string]interface{}) error {
+=======
+func (c *StorageInstance) Store(downloadKey string, dataToStore map[string]interface{}) error {
+>>>>>>> origin/main
 	updatedJSONData, err := json.Marshal(dataToStore)
 	if err != nil {
 		return errors.New("error encoding data to JSON")
 	}
 
+<<<<<<< HEAD
 	return c.updateWithContext(ctx, func(txn *badger.Txn) error {
+=======
+	return c.updateWithTimeout(func(txn *badger.Txn) error {
+>>>>>>> origin/main
 		e := badger.NewEntry([]byte(downloadKey), updatedJSONData).WithTTL(c.PersistDuration)
 		return txn.SetEntry(e)
 	})
 }
 
+<<<<<<< HEAD
 func (c StorageInstance) Retrieve(ctx context.Context, downloadKey string) (map[string]interface{}, error) {
+=======
+func (c *StorageInstance) Retrieve(downloadKey string) (map[string]interface{}, error) {
+>>>>>>> origin/main
 	var existingData map[string]interface{}
 	err := c.viewWithContext(ctx, func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(downloadKey))
 		if err != nil {
 			if err == badger.ErrKeyNotFound {
+<<<<<<< HEAD
 				// Return an empty map for missing keys so callers can
 				// treat a non-existent key as an empty data set (e.g.
 				// the first patch to a new key path).
+=======
+>>>>>>> origin/main
 				existingData = make(map[string]interface{})
 				return nil
 			}
@@ -247,15 +359,70 @@ func (c StorageInstance) Retrieve(ctx context.Context, downloadKey string) (map[
 	return existingData, err
 }
 
+<<<<<<< HEAD
 func (c StorageInstance) Delete(ctx context.Context, downloadKey string) error {
 	return c.updateWithContext(ctx, func(txn *badger.Txn) error {
+=======
+func (c *StorageInstance) Delete(downloadKey string) error {
+	return c.updateWithTimeout(func(txn *badger.Txn) error {
+>>>>>>> origin/main
 		return txn.Delete([]byte(downloadKey))
 	})
 }
 
-func (c StorageInstance) StoreRawForTesting(downloadKey string, data []byte) error {
-	return c.Db.Update(func(txn *badger.Txn) error {
+func (c *StorageInstance) StoreRawForTesting(downloadKey string, data []byte) error {
+	return c.updateWithTimeout(func(txn *badger.Txn) error {
 		e := badger.NewEntry([]byte(downloadKey), data).WithTTL(c.PersistDuration)
 		return txn.SetEntry(e)
 	})
+}
+
+// CheckHealth performs a health check on the storage backend.
+// It verifies the database is responsive, checks degraded state,
+// and reports available disk space for persistent stores.
+func (c *StorageInstance) CheckHealth() HealthStatus {
+	if c.degraded.Load() != 0 {
+		return HealthStatus{
+			Healthy:  false,
+			Degraded: true,
+			Message:  "storage is degraded after a write timeout",
+		}
+	}
+
+	// Verify database is responsive with a lightweight read.
+	err := c.Db.View(func(txn *badger.Txn) error {
+		_, err := txn.Get([]byte("__healthcheck__"))
+		if err == badger.ErrKeyNotFound {
+			return nil
+		}
+		return err
+	})
+	if err != nil {
+		return HealthStatus{
+			Healthy: false,
+			Message: fmt.Sprintf("database read check failed: %v", err),
+		}
+	}
+
+	status := HealthStatus{
+		Healthy: true,
+		Message: "ok",
+	}
+
+	// Check disk space for persistent stores.
+	if c.storePath != "" {
+		free, err := diskFreeBytes(c.storePath)
+		if err != nil {
+			slog.Warn("failed to check disk space", "error", err)
+		} else {
+			status.DiskFreeBytes = free
+			const minFreeBytes = 100 * 1024 * 1024 // 100 MB
+			if free < minFreeBytes {
+				status.Healthy = false
+				status.Message = fmt.Sprintf("low disk space: %d bytes free", free)
+			}
+		}
+	}
+
+	return status
 }
