@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -70,13 +71,24 @@ func TestRateLimit(t *testing.T) {
 	}
 }
 
+func mustParseCIDR(s string) *net.IPNet {
+	_, network, err := net.ParseCIDR(s)
+	if err != nil {
+		panic(err)
+	}
+	return network
+}
+
 func TestRealIP(t *testing.T) {
+	trustedNet := mustParseCIDR("172.19.0.0/16")
+
 	tests := []struct {
-		name       string
-		remoteAddr string
-		xRealIP    string
-		xForwardedFor string
-		want       string
+		name           string
+		remoteAddr     string
+		xRealIP        string
+		xForwardedFor  string
+		trustedProxies []*net.IPNet
+		want           string
 	}{
 		{
 			name:       "Uses RemoteAddr when no proxy headers",
@@ -84,29 +96,48 @@ func TestRealIP(t *testing.T) {
 			want:       "1.2.3.4",
 		},
 		{
-			name:       "Prefers X-Real-IP over RemoteAddr",
-			remoteAddr: "172.19.0.7:1234",
-			xRealIP:    "203.0.113.5",
-			want:       "203.0.113.5",
+			name:           "Prefers X-Real-IP over RemoteAddr when proxy is trusted",
+			remoteAddr:     "172.19.0.7:1234",
+			xRealIP:        "203.0.113.5",
+			trustedProxies: []*net.IPNet{trustedNet},
+			want:           "203.0.113.5",
 		},
 		{
-			name:          "Uses X-Forwarded-For when X-Real-IP absent",
-			remoteAddr:    "172.19.0.7:1234",
-			xForwardedFor: "203.0.113.10, 10.0.0.1",
-			want:          "203.0.113.10",
+			name:           "Uses X-Forwarded-For when X-Real-IP absent and proxy is trusted",
+			remoteAddr:     "172.19.0.7:1234",
+			xForwardedFor:  "203.0.113.10, 10.0.0.1",
+			trustedProxies: []*net.IPNet{trustedNet},
+			want:           "203.0.113.10",
 		},
 		{
-			name:          "Prefers X-Real-IP over X-Forwarded-For",
+			name:           "Prefers X-Real-IP over X-Forwarded-For",
+			remoteAddr:     "172.19.0.7:1234",
+			xRealIP:        "203.0.113.5",
+			xForwardedFor:  "203.0.113.10",
+			trustedProxies: []*net.IPNet{trustedNet},
+			want:           "203.0.113.5",
+		},
+		{
+			name:           "X-Forwarded-For with single entry",
+			remoteAddr:     "172.19.0.7:1234",
+			xForwardedFor:  "198.51.100.42",
+			trustedProxies: []*net.IPNet{trustedNet},
+			want:           "198.51.100.42",
+		},
+		{
+			name:           "Ignores proxy headers when proxy IP is not trusted",
+			remoteAddr:     "10.0.0.1:1234",
+			xRealIP:        "203.0.113.5",
+			xForwardedFor:  "203.0.113.10",
+			trustedProxies: []*net.IPNet{trustedNet},
+			want:           "10.0.0.1",
+		},
+		{
+			name:          "Ignores proxy headers when TrustedProxies is empty",
 			remoteAddr:    "172.19.0.7:1234",
 			xRealIP:       "203.0.113.5",
 			xForwardedFor: "203.0.113.10",
-			want:          "203.0.113.5",
-		},
-		{
-			name:          "X-Forwarded-For with single entry",
-			remoteAddr:    "172.19.0.7:1234",
-			xForwardedFor: "198.51.100.42",
-			want:          "198.51.100.42",
+			want:          "172.19.0.7",
 		},
 	}
 
@@ -121,7 +152,7 @@ func TestRealIP(t *testing.T) {
 				req.Header.Set("X-Forwarded-For", tt.xForwardedFor)
 			}
 
-			got := realIP(req)
+			got := realIP(req, tt.trustedProxies)
 			if got != tt.want {
 				t.Errorf("realIP() = %q, want %q", got, tt.want)
 			}
@@ -131,14 +162,16 @@ func TestRealIP(t *testing.T) {
 
 func TestRateLimit_BehindReverseProxy(t *testing.T) {
 	// Simulate Traefik forwarding requests from two different real clients.
-	// Both arrive with the same RemoteAddr (Traefik's internal IP), but
-	// with distinct X-Forwarded-For values. Each client should have its own
-	// rate limit bucket.
+	// Both arrive with the same RemoteAddr (Traefik's internal IP), but with
+	// distinct X-Forwarded-For values. Each client should have its own rate
+	// limit bucket.
+	trustedNet := mustParseCIDR("172.19.0.0/16")
 	mockStats := stats.NewStats()
 	config := Config{
 		RateLimitPerSecond: 2,
 		RateLimitBurst:     1,
 		StatsInstance:      mockStats,
+		TrustedProxies:     []*net.IPNet{trustedNet},
 	}
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -9,8 +9,10 @@ import (
 	"io/fs"
 	"log"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/dhcgn/iot-ephemeral-value-store/data"
@@ -49,6 +51,7 @@ var (
 	storePath             string
 	port                  int
 	healthcheck           bool
+	trustedProxiesFlag    string
 )
 
 // Set in build time
@@ -64,6 +67,7 @@ func initFlags() {
 	myFlags.StringVar(&storePath, "store", DefaultStorePath, "Path to the directory where the values will be stored.")
 	myFlags.IntVar(&port, "port", DefaultPort, "The port number on which the server will listen.")
 	myFlags.BoolVar(&healthcheck, "healthcheck", false, "Perform a health check against the running server and exit.")
+	myFlags.StringVar(&trustedProxiesFlag, "trusted-proxies", "", "Comma-separated list of trusted proxy CIDRs or IPs (e.g. 172.19.0.0/16). When set, X-Real-IP and X-Forwarded-For headers from these proxies are used for rate limiting.")
 
 	myFlags.Parse(os.Args[1:])
 }
@@ -119,6 +123,7 @@ func main() {
 		RateLimitBurst:     RateLimitBurst,
 		MaxRequestSize:     MaxRequestSize,
 		StatsInstance:      restStats,
+		TrustedProxies:     parseTrustedProxies(trustedProxiesFlag),
 	}
 
 	r := createRouter(httphandlerConfig, middlewareConfig, restStats, mcpStats, &storage)
@@ -279,6 +284,41 @@ func viewerHandler() http.HandlerFunc {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Write(content)
 	}
+}
+
+// parseTrustedProxies parses a comma-separated string of CIDRs or single IPs
+// into a slice of *net.IPNet. Invalid entries are logged and skipped.
+func parseTrustedProxies(raw string) []*net.IPNet {
+	if raw == "" {
+		return nil
+	}
+	var networks []*net.IPNet
+	for _, entry := range strings.Split(raw, ",") {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+		// Accept plain IPs by converting them to a /32 (IPv4) or /128 (IPv6) CIDR.
+		if !strings.Contains(entry, "/") {
+			ip := net.ParseIP(entry)
+			if ip == nil {
+				slog.Warn("trusted-proxies: ignoring invalid IP", "entry", entry)
+				continue
+			}
+			if ip.To4() != nil {
+				entry = entry + "/32"
+			} else {
+				entry = entry + "/128"
+			}
+		}
+		_, network, err := net.ParseCIDR(entry)
+		if err != nil {
+			slog.Warn("trusted-proxies: ignoring invalid CIDR", "entry", entry, "error", err)
+			continue
+		}
+		networks = append(networks, network)
+	}
+	return networks
 }
 
 type PageData struct {

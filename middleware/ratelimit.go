@@ -10,29 +10,49 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// realIP extracts the real client IP from the request. When the server is
-// deployed behind a reverse proxy (e.g. Traefik), the actual client address is
-// forwarded via the X-Real-IP or X-Forwarded-For headers. Falls back to
-// r.RemoteAddr when no proxy headers are present.
-func realIP(r *http.Request) string {
-	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return strings.TrimSpace(xri)
-	}
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		// X-Forwarded-For may be a comma-separated list; the first entry is the
-		// original client IP.
-		return strings.TrimSpace(strings.SplitN(xff, ",", 2)[0])
-	}
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+// realIP extracts the real client IP from the request. When the direct peer
+// address matches one of the trusted proxy networks, the actual client address
+// is read from X-Real-IP or X-Forwarded-For headers set by the proxy. Falls
+// back to r.RemoteAddr when no trusted proxy headers are present.
+func realIP(r *http.Request, trustedProxies []*net.IPNet) string {
+	peerIP, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		return r.RemoteAddr
+		peerIP = r.RemoteAddr
 	}
-	return ip
+
+	if len(trustedProxies) > 0 && isTrustedProxy(peerIP, trustedProxies) {
+		if xri := r.Header.Get("X-Real-IP"); xri != "" {
+			return strings.TrimSpace(xri)
+		}
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			// X-Forwarded-For may be a comma-separated list; the first entry is
+			// the original client IP.
+			return strings.TrimSpace(strings.SplitN(xff, ",", 2)[0])
+		}
+	}
+
+	return peerIP
+}
+
+// isTrustedProxy reports whether ip is contained in any of the given networks.
+func isTrustedProxy(ip string, networks []*net.IPNet) bool {
+	parsed := net.ParseIP(ip)
+	if parsed == nil {
+		return false
+	}
+	for _, network := range networks {
+		if network.Contains(parsed) {
+			return true
+		}
+	}
+	return false
 }
 
 // RateLimit is a middleware that limits the number of requests per second per
-// client IP. Local addresses and requests forwarded by a trusted reverse proxy
-// that originate from localhost are excluded from rate limiting.
+// client IP. Local addresses are excluded from rate limiting. When
+// TrustedProxies is configured, the real client IP is resolved from proxy
+// headers so that each end-user IP gets its own rate limit bucket even when all
+// traffic arrives through a single reverse proxy such as Traefik.
 func (c Config) RateLimit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// In local testing, r.RemoteAddr is empty
@@ -41,7 +61,7 @@ func (c Config) RateLimit(next http.Handler) http.Handler {
 			return
 		}
 
-		ip := realIP(r)
+		ip := realIP(r, c.TrustedProxies)
 		if ip == "" {
 			slog.Error("middleware: failed to parse remote address", "remote_addr", r.RemoteAddr)
 			c.StatsInstance.IncrementHTTPErrors()
