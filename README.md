@@ -181,6 +181,7 @@ services:
 ```
 
 **Traefik proxy example with auto-detected trusted CIDR:**
+This builds a comma-separated list of all Docker network CIDRs attached to the Traefik container and passes it to `-trusted-proxies`.
 ```bash
 TRAEFIK_CIDRS="$(
   docker inspect traefik --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' |
