@@ -33,9 +33,9 @@ func (c Config) handleUpload(w http.ResponseWriter, r *http.Request, uploadKey, 
 	var err error
 
 	if isPatch {
-		downloadKey, _, err = c.DataService.Patch(uploadKey, path, paramMap)
+		downloadKey, _, err = c.DataService.Patch(r.Context(), uploadKey, path, paramMap)
 	} else {
-		downloadKey, _, err = c.DataService.Upload(uploadKey, paramMap)
+		downloadKey, _, err = c.DataService.Upload(r.Context(), uploadKey, paramMap)
 	}
 
 	if err != nil {

@@ -109,7 +109,7 @@ func main() {
 	mcpStats := stats.NewStats()
 
 	storage := createStorage(storePath, persistDuration)
-	defer storage.Db.Close()
+	defer storage.Close()
 
 	dataService := &data.Service{StorageInstance: &storage}
 

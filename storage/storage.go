@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,6 +28,17 @@ const (
 	defaultWriteTimeout = 10 * time.Second
 )
 
+// DefaultOperationTimeout is the maximum time a single BadgerDB read
+// transaction is allowed to run before the caller's context deadline
+// takes precedence. If the caller already carries a shorter deadline (e.g.
+// from the HTTP server's WriteTimeout) that deadline wins automatically.
+const DefaultOperationTimeout = 10 * time.Second
+
+// valueLogGCDiscardRatio is the ratio passed to RunValueLogGC.
+// A value of 0.5 means Badger will rewrite a value log file if it can
+// discard at least 50% of its space.
+const valueLogGCDiscardRatio = 0.5
+
 // badgerSlogLogger bridges badger's Logger interface to slog.
 type badgerSlogLogger struct{}
 
@@ -43,25 +55,30 @@ func (badgerSlogLogger) Debugf(format string, args ...interface{}) {
 	slog.Debug(fmt.Sprintf("badger: "+format, args...))
 }
 
-// StorageInstance wraps a BadgerDB database with write-timeout protection
-// and a degraded-state circuit breaker.
+// StorageInstance wraps a BadgerDB database with write-timeout protection,
+// a degraded-state circuit breaker, and periodic value log garbage collection.
+// Call Close to release resources and stop the GC goroutine.
 type StorageInstance struct {
 	Db              *badger.DB
 	PersistDuration time.Duration
 	WriteTimeout    time.Duration
 	storePath       string
+	stopGC          chan struct{}
 
 	// degraded is set to 1 after a write timeout to reject further writes
 	// and prevent goroutine accumulation from a hung BadgerDB.
 	degraded atomic.Int32
 }
 
-// Storage defines the data access interface for the value store.
+// Storage defines the operations for persisting and retrieving ephemeral
+// IoT data. All methods accept a context.Context so that callers (e.g. HTTP
+// handlers) can propagate deadlines and cancellation to the underlying
+// database operations.
 type Storage interface {
-	GetJSON(downloadKey string) ([]byte, error)
-	Delete(downloadKey string) error
-	Store(downloadKey string, dataToStore map[string]interface{}) error
-	Retrieve(downloadKey string) (map[string]interface{}, error)
+	GetJSON(ctx context.Context, downloadKey string) ([]byte, error)
+	Delete(ctx context.Context, downloadKey string) error
+	Store(ctx context.Context, downloadKey string, dataToStore map[string]interface{}) error
+	Retrieve(ctx context.Context, downloadKey string) (map[string]interface{}, error)
 }
 
 // HealthChecker reports the health of the storage backend.
@@ -71,10 +88,41 @@ type HealthChecker interface {
 
 // HealthStatus contains the result of a storage health check.
 type HealthStatus struct {
-	Healthy      bool   `json:"healthy"`
-	Degraded     bool   `json:"degraded"`
-	Message      string `json:"message,omitempty"`
-	DiskFreeBytes int64 `json:"disk_free_bytes,omitempty"`
+	Healthy       bool   `json:"healthy"`
+	Degraded      bool   `json:"degraded"`
+	Message       string `json:"message,omitempty"`
+	DiskFreeBytes int64  `json:"disk_free_bytes,omitempty"`
+}
+
+// Close stops the periodic value log GC goroutine (if running) and closes the
+// underlying BadgerDB.
+func (c *StorageInstance) Close() error {
+	if c.stopGC != nil {
+		close(c.stopGC)
+	}
+	return c.Db.Close()
+}
+
+// startValueLogGC starts a background goroutine that periodically runs
+// Badger's value log garbage collection. The goroutine stops when stopCh
+// is closed.
+func startValueLogGC(db *badger.DB, interval time.Duration, stopCh chan struct{}) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stopCh:
+				return
+			case <-ticker.C:
+				for {
+					if err := db.RunValueLogGC(valueLogGCDiscardRatio); err != nil {
+						break
+					}
+				}
+			}
+		}
+	}()
 }
 
 func NewInMemoryStorage() StorageInstance {
@@ -84,9 +132,9 @@ func NewInMemoryStorage() StorageInstance {
 	}
 
 	return StorageInstance{
-		Db:           db,
+		Db:              db,
 		PersistDuration: 1 * time.Minute,
-		WriteTimeout: defaultWriteTimeout,
+		WriteTimeout:    defaultWriteTimeout,
 	}
 }
 
@@ -108,39 +156,88 @@ func NewPersistentStorage(storePath string, persistDuration time.Duration) Stora
 		log.Fatal(err)
 	}
 
+	stopCh := make(chan struct{})
+	startValueLogGC(db, 5*time.Minute, stopCh)
+
 	return StorageInstance{
 		Db:              db,
 		PersistDuration: persistDuration,
 		WriteTimeout:    defaultWriteTimeout,
 		storePath:       absStorePath,
+		stopGC:          stopCh,
 	}
 }
 
-// updateWithTimeout runs a badger Update with a write timeout and
-// circuit-breaker protection. If the operation times out, the storage
-// is marked as degraded and subsequent writes are rejected.
-func (c *StorageInstance) updateWithTimeout(fn func(txn *badger.Txn) error) error {
+// viewWithContext runs a read-only BadgerDB transaction, honouring the
+// caller's context deadline/cancellation. If ctx has no deadline, a
+// fallback timeout of DefaultOperationTimeout is applied.
+//
+// When the context expires before the transaction completes, the function
+// returns immediately with the context error. The background goroutine
+// running the actual transaction will finish on its own — BadgerDB
+// transactions are not cancellable, so we must let them complete to avoid
+// corrupted state.
+func (c *StorageInstance) viewWithContext(ctx context.Context, fn func(txn *badger.Txn) error) error {
+	ctx, cancel := contextWithFallbackTimeout(ctx)
+	defer cancel()
+
+	// Fast path: if context is already done, don't start a transaction.
+	if ctx.Err() != nil {
+		return fmt.Errorf("database read operation cancelled: %w", ctx.Err())
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Db.View(fn)
+	}()
+
+	select {
+	case err := <-done:
+		return err
+	case <-ctx.Done():
+		return fmt.Errorf("database read operation cancelled: %w", ctx.Err())
+	}
+}
+
+// updateWithContext runs a read-write BadgerDB transaction with circuit-breaker
+// protection. If the storage is degraded, the write is immediately rejected.
+// If the operation exceeds the write timeout, the storage is marked degraded.
+// The caller's context is also respected for early cancellation.
+func (c *StorageInstance) updateWithContext(ctx context.Context, fn func(txn *badger.Txn) error) error {
 	if c.degraded.Load() != 0 {
 		return ErrStorageDegraded
 	}
 
-	type result struct {
-		err error
+	if ctx.Err() != nil {
+		return fmt.Errorf("database write operation cancelled: %w", ctx.Err())
 	}
-	ch := make(chan result, 1)
+
+	done := make(chan error, 1)
 	go func() {
-		ch <- result{err: c.Db.Update(fn)}
+		done <- c.Db.Update(fn)
 	}()
 
 	select {
-	case res := <-ch:
-		return res.err
+	case err := <-done:
+		return err
+	case <-ctx.Done():
+		return fmt.Errorf("database write operation cancelled: %w", ctx.Err())
 	case <-time.After(c.WriteTimeout):
 		c.degraded.Store(1)
 		slog.Error("storage write timed out, marking storage as degraded",
 			"timeout", c.WriteTimeout.String())
 		return ErrStorageTimeout
 	}
+}
+
+// contextWithFallbackTimeout returns ctx with a DefaultOperationTimeout if
+// ctx does not already carry a deadline. The caller must call the returned
+// cancel function.
+func contextWithFallbackTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
+	if _, ok := ctx.Deadline(); ok {
+		return context.WithCancel(ctx)
+	}
+	return context.WithTimeout(ctx, DefaultOperationTimeout)
 }
 
 // ResetDegraded clears the degraded state, allowing writes again.
@@ -154,9 +251,9 @@ func (c *StorageInstance) IsDegraded() bool {
 	return c.degraded.Load() != 0
 }
 
-func (c *StorageInstance) GetJSON(downloadKey string) ([]byte, error) {
+func (c *StorageInstance) GetJSON(ctx context.Context, downloadKey string) ([]byte, error) {
 	var jsonData []byte
-	err := c.Db.View(func(txn *badger.Txn) error {
+	err := c.viewWithContext(ctx, func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(downloadKey))
 		if err != nil {
 			return err
@@ -167,24 +264,27 @@ func (c *StorageInstance) GetJSON(downloadKey string) ([]byte, error) {
 	return jsonData, err
 }
 
-func (c *StorageInstance) Store(downloadKey string, dataToStore map[string]interface{}) error {
+func (c *StorageInstance) Store(ctx context.Context, downloadKey string, dataToStore map[string]interface{}) error {
 	updatedJSONData, err := json.Marshal(dataToStore)
 	if err != nil {
 		return errors.New("error encoding data to JSON")
 	}
 
-	return c.updateWithTimeout(func(txn *badger.Txn) error {
+	return c.updateWithContext(ctx, func(txn *badger.Txn) error {
 		e := badger.NewEntry([]byte(downloadKey), updatedJSONData).WithTTL(c.PersistDuration)
 		return txn.SetEntry(e)
 	})
 }
 
-func (c *StorageInstance) Retrieve(downloadKey string) (map[string]interface{}, error) {
+func (c *StorageInstance) Retrieve(ctx context.Context, downloadKey string) (map[string]interface{}, error) {
 	var existingData map[string]interface{}
-	err := c.Db.View(func(txn *badger.Txn) error {
+	err := c.viewWithContext(ctx, func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(downloadKey))
 		if err != nil {
 			if err == badger.ErrKeyNotFound {
+				// Return an empty map for missing keys so callers can
+				// treat a non-existent key as an empty data set (e.g.
+				// the first patch to a new key path).
 				existingData = make(map[string]interface{})
 				return nil
 			}
@@ -199,14 +299,14 @@ func (c *StorageInstance) Retrieve(downloadKey string) (map[string]interface{}, 
 	return existingData, err
 }
 
-func (c *StorageInstance) Delete(downloadKey string) error {
-	return c.updateWithTimeout(func(txn *badger.Txn) error {
+func (c *StorageInstance) Delete(ctx context.Context, downloadKey string) error {
+	return c.updateWithContext(ctx, func(txn *badger.Txn) error {
 		return txn.Delete([]byte(downloadKey))
 	})
 }
 
 func (c *StorageInstance) StoreRawForTesting(downloadKey string, data []byte) error {
-	return c.updateWithTimeout(func(txn *badger.Txn) error {
+	return c.updateWithContext(context.Background(), func(txn *badger.Txn) error {
 		e := badger.NewEntry([]byte(downloadKey), data).WithTTL(c.PersistDuration)
 		return txn.SetEntry(e)
 	})

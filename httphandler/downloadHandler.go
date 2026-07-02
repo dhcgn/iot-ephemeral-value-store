@@ -23,7 +23,7 @@ func (c Config) downloadPlainHandler(w http.ResponseWriter, r *http.Request, bas
 	downloadKey := vars["downloadKey"]
 	param := vars["param"]
 
-	jsonData, err := c.DataService.DownloadJSON(downloadKey)
+	jsonData, err := c.DataService.DownloadJSON(r.Context(), downloadKey)
 	if err != nil {
 		slog.Debug("download plain: failed to retrieve data", "error", err, "method", r.Method, "path", r.URL.Path)
 		c.StatsInstance.IncrementHTTPErrors()
@@ -95,7 +95,7 @@ func (c Config) DownloadJsonHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	downloadKey := vars["downloadKey"]
 
-	jsonData, err := c.DataService.DownloadJSON(downloadKey)
+	jsonData, err := c.DataService.DownloadJSON(r.Context(), downloadKey)
 	if err != nil {
 		slog.Debug("download JSON: failed to retrieve data", "error", err, "method", r.Method, "path", r.URL.Path)
 		c.StatsInstance.IncrementHTTPErrors()
@@ -120,7 +120,7 @@ func (c Config) DownloadRootHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	downloadKey := vars["downloadKey"]
 
-	jsonData, err := c.DataService.DownloadJSON(downloadKey)
+	jsonData, err := c.DataService.DownloadJSON(r.Context(), downloadKey)
 	if err != nil {
 		slog.Debug("download root: failed to retrieve data", "error", err, "method", r.Method, "path", r.URL.Path)
 		c.StatsInstance.IncrementHTTPErrors()
