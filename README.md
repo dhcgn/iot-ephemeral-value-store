@@ -170,7 +170,14 @@ services:
       - "8080:8080"
     volumes:
       - ./data:/data
-    command: -persist-values-for 24h -store /data
+    command:
+      - -persist-values-for=24h
+      - -store=/data
+      - -port=8080
+      # Optional when running behind a reverse proxy:
+      # - -trusted-proxies=172.19.0.0/16
+    healthcheck:
+      test: [ "CMD", "/app/iot-ephemeral-value-store-server", "-healthcheck" ]
 ```
 
 **Traefik proxy example with auto-detected trusted CIDR:**
@@ -196,6 +203,7 @@ bash <(curl -s https://raw.githubusercontent.com/dhcgn/iot-ephemeral-value-store
 - `-persist-values-for`: Data retention duration (default: "24h")
 - `-store`: Storage directory path (default: "./data")
 - `-port`: Server port (default: 8080)
+- `-healthcheck`: Perform a health check against the running server and exit.
 - `-trusted-proxies`: Comma-separated list of trusted proxy CIDRs or IPs. When set, `X-Real-IP` and `X-Forwarded-For` from these proxies are used for rate limiting. Useful when running behind Traefik or another reverse proxy.
 
 **Linux command to get the Traefik Docker network CIDR(s):**
