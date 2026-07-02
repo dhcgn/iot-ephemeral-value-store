@@ -173,7 +173,7 @@ services:
     command: -persist-values-for 24h -store /data
 ```
 
-**Docker Compose behind Traefik with per-client rate limiting:**
+**Traefik proxy example with auto-detected trusted CIDR:**
 ```bash
 docker run -p 8080:8080 \
   dhcgn/iot-ephemeral-value-store-server \
@@ -203,6 +203,7 @@ bash <(curl -s https://raw.githubusercontent.com/dhcgn/iot-ephemeral-value-store
 ```bash
 docker inspect traefik --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' | xargs -r -I{} docker network inspect {} -f '{{.Name}} {{(index .IPAM.Config 0).Subnet}}'
 ```
+Replace `traefik` with your Traefik container name if different.
 
 ## Built-in Web Interface
 
