@@ -175,7 +175,7 @@ services:
 
 **Traefik proxy example with auto-detected trusted CIDR:**
 ```bash
-TRAEFIK_CIDRS="$(docker inspect traefik --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' | xargs -r -I{} docker network inspect {} -f '{{(index .IPAM.Config 0).Subnet}}' | paste -sd, -)"
+TRAEFIK_CIDRS="$(docker inspect traefik --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' | while read -r net; do docker network inspect "$net" -f '{{(index .IPAM.Config 0).Subnet}}'; done | paste -sd, -)"
 docker run -p 8080:8080 dhcgn/iot-ephemeral-value-store-server -trusted-proxies="$TRAEFIK_CIDRS"
 ```
 
@@ -200,7 +200,7 @@ bash <(curl -s https://raw.githubusercontent.com/dhcgn/iot-ephemeral-value-store
 
 **Linux command to get the Traefik Docker network CIDR(s):**
 ```bash
-docker inspect traefik --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' | xargs -r -I{} docker network inspect {} -f '{{.Name}} {{(index .IPAM.Config 0).Subnet}}'
+docker inspect traefik --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' | while read -r net; do docker network inspect "$net" -f '{{.Name}} {{(index .IPAM.Config 0).Subnet}}'; done
 ```
 Replace `traefik` with your Traefik container name if different.
 
