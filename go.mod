@@ -33,7 +33,7 @@ require (
 	github.com/google/flatbuffers v25.12.19+incompatible // indirect
 	github.com/klauspost/compress v1.18.4 // indirect
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/net v0.50.0 // indirect
-	golang.org/x/sys v0.41.0
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/sys v0.45.0
 	google.golang.org/protobuf v1.36.11 // indirect
 )
